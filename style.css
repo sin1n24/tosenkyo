@@ -654,3 +654,15 @@ html.en #mei-points { padding-top: 18px; }
   from { opacity: 0; transform: translateY(10px); visibility: hidden; }
   to   { opacity: 1; transform: none; visibility: visible; }
 }
+
+/* 伝える画面のボタン：画像付きで共有（主）／Xでポスト／戻る */
+.sv-foot .row { align-items: stretch; }
+.sv-foot .row .btn-sub { padding: 10px 14px; letter-spacing: .15em; text-indent: .15em; background: rgba(22,16,19,.72); }
+#btn-sv-share {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15;
+  font-size: 19px; color: #241a10; border-color: var(--gold-bright);
+  background: linear-gradient(160deg, var(--gold-bright), var(--gold)) !important;
+  box-shadow: 0 0 14px rgba(238,207,125,.35);
+}
+#btn-sv-share small { font-size: 10px; letter-spacing: .2em; text-indent: .2em; }
+#btn-sv-back { padding: 10px 12px !important; }

@@ -1101,6 +1101,8 @@ function openShareView(sh) {
   sv.classList.toggle('rare', r.pts >= SHARE_MIN_PTS);
   sv.style.animation = 'none'; void sv.offsetWidth; sv.style.animation = '';
   show(sv);
+  shareFile = null;
+  setTimeout(() => { if (shareCtx === sh) prepareShareImage(); }, 1150);
   // 派手に：金の閃光と紙吹雪
   setTimeout(() => {
     if (state !== 'pose') return;
@@ -1335,8 +1337,7 @@ $('btn-card-share').addEventListener('click', (e) => {
   showMeiPose(r.id, { res: r, line, total: false });
 });
 $('btn-sv-back').addEventListener('click', () => { snd.tap(); endMeiPose(); });
-$('btn-sv-post').addEventListener('click', async () => {
-  if (!shareCtx) return;
+function shareText() {
   const r = shareCtx.res, rank = RANKS.find(x => totalScore >= x.min);
   const head = lang === 'ja'
     ? `フィジカル投扇興で「${r.mei.name}」${ptsLabel(r.pts)}！`
@@ -1344,12 +1345,95 @@ $('btn-sv-post').addEventListener('click', async () => {
   const tail = shareCtx.total
     ? (lang === 'ja' ? `\n五投 計${totalLabel(totalScore)}「${rank.name}」` : `\n5 throws: ${totalLabel(totalScore)} “${rank.name}”`)
     : '';
-  const text = head + tail + '\n#フィジカル投扇興';
-  const url = location.origin + location.pathname;
+  return head + tail + '\n#フィジカル投扇興';
+}
+const shareUrl = () => location.origin + location.pathname.replace(/index\.html$/, '');
+
+// 伝える画面をそのまま1枚の画像にする（3D は描いた直後に読み取り、文字とロゴは画面上の位置に描き重ねる）
+function buildShareImage() {
+  renderer.render(scene, camera);
+  const W = glCanvas.width, Hh = glCanvas.height, k = W / innerWidth;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = Hh;
+  const g = c.getContext('2d');
+  g.drawImage(glCanvas, 0, 0);
+  // 上下の暗がり（CSS と同じ）
+  let gr = g.createLinearGradient(0, 0, 0, Hh * 0.48);
+  gr.addColorStop(0, 'rgba(14,9,11,.82)'); gr.addColorStop(0.71, 'rgba(14,9,11,.35)'); gr.addColorStop(1, 'rgba(14,9,11,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, W, Hh * 0.48);
+  gr = g.createLinearGradient(0, Hh, 0, Hh * 0.74);
+  gr.addColorStop(0, 'rgba(14,9,11,.8)'); gr.addColorStop(1, 'rgba(14,9,11,0)');
+  g.fillStyle = gr; g.fillRect(0, Hh * 0.74, W, Hh * 0.26);
+  // 枠
+  const rare = $('share-view').classList.contains('rare');
+  g.strokeStyle = rare ? '#eecf7d' : 'rgba(238,207,125,.55)';
+  g.lineWidth = (rare ? 2 : 1) * k;
+  g.strokeRect(10 * k, 10 * k, W - 20 * k, Hh - 20 * k);
+  // 文字
+  for (const id of ['sv-total', 'sv-desc', 'sv-pts', 'sv-yomi', 'sv-mei']) {
+    const el = $(id);
+    if (!el.textContent || el.offsetParent === null) continue;
+    const rc = el.getBoundingClientRect(), cs = getComputedStyle(el);
+    g.font = `${cs.fontWeight} ${parseFloat(cs.fontSize) * k}px ${cs.fontFamily}`;
+    if ('letterSpacing' in g) g.letterSpacing = cs.letterSpacing === 'normal' ? '0px' : (parseFloat(cs.letterSpacing) * k) + 'px';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    const x = (rc.left + rc.width / 2) * k, y = (rc.top + rc.height / 2) * k;
+    g.shadowColor = 'rgba(0,0,0,.85)'; g.shadowBlur = 8 * k; g.shadowOffsetY = 2 * k;
+    if (id === 'sv-mei' && rare) {
+      const lg = g.createLinearGradient(0, rc.top * k, 0, rc.bottom * k);
+      lg.addColorStop(0.05, '#fffdf2'); lg.addColorStop(0.4, '#ffeeb5'); lg.addColorStop(0.7, '#f3d68a'); lg.addColorStop(1, '#e2bd66');
+      g.fillStyle = lg;
+    } else g.fillStyle = cs.color;
+    g.fillText(el.textContent, x, y);
+  }
+  const t = document.querySelector('.sv-title');
+  {
+    const rc = t.getBoundingClientRect(), cs = getComputedStyle(t);
+    g.font = `${parseFloat(cs.fontSize) * k}px ${cs.fontFamily}`;
+    if ('letterSpacing' in g) g.letterSpacing = (parseFloat(cs.letterSpacing) * k) + 'px';
+    g.fillStyle = cs.color; g.fillText(t.textContent, (rc.left + rc.width / 2) * k, (rc.top + rc.height / 2) * k);
+  }
+  g.shadowColor = 'transparent';
+  const logo = document.querySelector('.sv-brand');
+  if (logo.complete) { const rc = logo.getBoundingClientRect(); g.drawImage(logo, rc.left * k, rc.top * k, rc.width * k, rc.height * k); }
+  // 画面に出していない URL を下端に小さく
+  if ('letterSpacing' in g) g.letterSpacing = '0px';
+  g.font = `${11 * k}px "Shippori Mincho B1", serif`;
+  g.fillStyle = 'rgba(205,191,164,.8)';
+  g.fillText(location.host + location.pathname.replace(/index\.html$/, '').replace(/\/$/, ''), W / 2, Hh - 22 * k);
+  return new Promise(res => c.toBlob(b => res(b), 'image/png'));
+}
+let shareFile = null;
+async function prepareShareImage() {
+  shareFile = null;
   try {
-    if (navigator.share) await navigator.share({ text, url });
-    else window.open('https://x.com/intent/post?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(url), '_blank', 'noopener');
-  } catch (_) { /* キャンセル */ }
+    const blob = await buildShareImage();
+    if (blob && shareCtx) shareFile = new File([blob], `tosenkyo_${shareCtx.res.id}.png`, { type: 'image/png' });
+  } catch (e) { console.warn('[share] 画像の作成に失敗', e); }
+}
+// 画像付きで共有：スマホの共有シートに画像を渡す。渡せない環境では画像を保存してもらう
+$('btn-sv-share').addEventListener('click', async () => {
+  if (!shareCtx) return;
+  snd.tap();
+  if (!shareFile) await prepareShareImage();
+  if (!shareFile) return;
+  const text = shareText() + '\n' + shareUrl();
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
+      await navigator.share({ files: [shareFile], text });
+      return;
+    }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(shareFile); a.download = shareFile.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+});
+// Xでポスト：文と URL だけ（画像は付かない）
+$('btn-sv-post').addEventListener('click', () => {
+  if (!shareCtx) return;
+  snd.tap();
+  window.open('https://x.com/intent/post?text=' + encodeURIComponent(shareText()) + '&url=' + encodeURIComponent(shareUrl()), '_blank', 'noopener');
 });
 
 /* ---------- 銘定表 ---------- */
@@ -1396,8 +1480,9 @@ function applyLang() {
   notes[1].textContent = T.scoresNote2;
   $('tips-list').innerHTML = T.tips.map(s => `<li>${s}</li>`).join('');
   document.querySelector('.result-label').textContent = T.resultLabel;
-  $('sv-hint').textContent = lang === 'ja' ? 'この画面をスクリーンショットして伝えよう' : 'Take a screenshot and share it';
-  $('btn-sv-post').textContent = lang === 'ja' ? 'ポストする' : 'Post';
+  $('sv-hint').textContent = lang === 'ja' ? 'この形を伝えよう' : 'Share this shape';
+  $('btn-sv-share').innerHTML = lang === 'ja' ? '<small>画像付きで</small>共有' : '<small>with image</small>Share';
+  $('btn-sv-post').textContent = lang === 'ja' ? 'Xでポスト' : 'Post on X';
   $('btn-sv-back').textContent = lang === 'ja' ? '戻る' : 'Back';
   $('btn-card-share').textContent = lang === 'ja' ? 'この形を伝える' : 'Share this shape';
   $('related-h').textContent = lang === 'ja' ? 'ゆかりの品' : 'Related items';
@@ -1450,6 +1535,7 @@ if (DEBUG) {
       snap: [makuraBody, choBody, fanBody].map(b => ({ p: b.position.clone(), q: b.quaternion.clone() })) };
     showMeiPose(id, { res, line, total: false });
   };
+  window.dbgShareImage = async () => { const b = await buildShareImage(); return await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); }); };
   window.dbgMeiPose = (id) => { showMeiPose(id); hide($('mei-card')); };
   window.MEI_ORDER = MEI_ORDER;
   window.dbgResult = () => throwResults.map(r => `${r.id}:${r.pts}`).join(', ');
