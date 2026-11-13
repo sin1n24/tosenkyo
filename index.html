@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>フィジカル投扇興 | sin1's studio</title>
+<meta name="description" content="江戸の雅な遊び「投扇興」を物理演算で。扇をふわりと投じ、蝶を落とし、源氏物語の銘を集めよう。">
+<meta name="theme-color" content="#161013">
+<meta property="og:title" content="フィジカル投扇興">
+<meta property="og:description" content="扇をふわりと投じ、蝶を落とす。江戸の雅をスマホで遊ぶ3Dゲーム。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sin1.studio/tosenkyo/">
+<meta property="og:image" content="https://sin1.studio/tosenkyo/ogp.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<!-- アイコン：扇（金）＋枕（漆）＋蝶（朱） -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23161013'/%3E%3Cpath d='M12 58 L7 30 A30 30 0 0 1 46 49 Z' fill='%23c9a24b'/%3E%3Cpath d='M12 58 L10 40 A19 19 0 0 1 35 52 Z' fill='%23f2e6cf'/%3E%3Ccircle cx='12' cy='58' r='3.5' fill='%23eecf7d'/%3E%3Crect x='40' y='26' width='15' height='30' rx='2' fill='%232b1017' stroke='%23c9a24b' stroke-width='2'/%3E%3Cpath d='M47.5 27 L39 12 Q47.5 5 56 12 Z' fill='%23b3341f'/%3E%3C/svg%3E">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;500;700&family=Yuji+Syuku&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=17">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="gl"></canvas>
+  <canvas id="trail"></canvas>
+
+  <!-- 入力レイヤー -->
+  <div id="input-layer"></div>
+
+  <!-- レティクル -->
+  <div id="reticle" class="hidden">
+    <svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.9"/>
+      <circle cx="50" cy="50" r="2.5" fill="currentColor"/>
+      <line x1="50" y1="8"  x2="50" y2="26" stroke="currentColor" stroke-width="1.2"/>
+      <line x1="50" y1="74" x2="50" y2="92" stroke="currentColor" stroke-width="1.2"/>
+      <line x1="8"  y1="50" x2="26" y2="50" stroke="currentColor" stroke-width="1.2"/>
+      <line x1="74" y1="50" x2="92" y2="50" stroke="currentColor" stroke-width="1.2"/>
+    </svg>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="hud-throw">一投目</div>
+    <div id="hud-score">〇点</div>
+    <button id="btn-menu" aria-label="menu">≡</button>
+  </div>
+
+  <!-- フェーズ案内 -->
+  <div id="phase-guide" class="hidden"></div>
+  <button id="btn-aim-ok" class="hidden">構え、よし</button>
+
+  <!-- 銘の短冊 -->
+  <div id="mei-card" class="hidden">
+    <div class="tanzaku">
+      <div id="mei-name"></div>
+      <div id="mei-yomi"></div>
+      <div id="mei-desc"></div>
+      <div id="mei-points"></div>
+    </div>
+    <button id="btn-card-share" class="btn-sub hidden">この形を伝える</button>
+  </div>
+
+  <!-- タイトル -->
+  <section id="screen-title">
+    <div class="title-tate">
+      <h1><span class="pre">フィジカル</span><span class="main">投扇興</span></h1>
+    </div>
+    <button id="btn-lang">English</button>
+    <nav class="title-nav">
+      <button id="btn-start" class="btn-main">遊&nbsp;ぶ</button>
+      <div class="row">
+        <button id="btn-scores" class="btn-sub">銘定表</button>
+        <button id="btn-tips" class="btn-sub">手ほどき</button>
+      </div>
+    </nav>
+    <footer class="credit">
+      <a href="https://sin1.studio" target="_blank" rel="noopener"><img class="brand-logo" src="img/sss_logo_washi.png" alt="sin1's studio" width="132" height="44"></a>
+    </footer>
+  </section>
+
+  <!-- 結果 -->
+  <section id="screen-result" class="hidden">
+    <p class="result-label">結びの一巻</p>
+    <div id="result-total"></div>
+    <div id="result-rank"></div>
+    <div id="result-comment"></div>
+    <div id="result-best"></div>
+    <ul id="result-list"></ul>
+    <nav class="title-nav">
+      <button id="btn-retry" class="btn-main">今一度</button>
+      <div class="row">
+        <button id="btn-share" class="btn-sub">結果を伝える</button>
+        <button id="btn-to-title" class="btn-sub">表座敷へ</button>
+      </div>
+    </nav>
+    <!-- 関連商品（ブログと同じ Amazon アソシエイト sin1n24-22。内容に合わせて手で選んだもの。ランダム選出はしない） -->
+    <section id="related" aria-labelledby="related-h">
+      <h2 id="related-h">ゆかりの品</h2>
+      <ul class="related-row">
+        <li><a href="https://www.amazon.co.jp/dp/B0G29S9KMD/?tag=sin1n24-22" target="_blank" rel="noopener noreferrer sponsored"><img src="https://m.media-amazon.com/images/I/5147A-QGsXL._AC_UL320_.jpg" alt="" loading="lazy" decoding="async"><span>投扇興 国産セット（京遊堂）</span></a></li>
+        <li><a href="https://www.amazon.co.jp/dp/B01MF8GPEC/?tag=sin1n24-22" target="_blank" rel="noopener noreferrer sponsored"><img src="https://m.media-amazon.com/images/I/61+FVKHu4yL._AC_UL320_.jpg" alt="" loading="lazy" decoding="async"><span>舞扇子 天地雲砂子</span></a></li>
+        <li><a href="https://www.amazon.co.jp/dp/4043574053/?tag=sin1n24-22" target="_blank" rel="noopener noreferrer sponsored"><img src="https://m.media-amazon.com/images/I/71NEHJDy8fL._AC_UL320_.jpg" alt="" loading="lazy" decoding="async"><span>源氏物語 ビギナーズ・クラシックス</span></a></li>
+      </ul>
+      <p class="related-note">Amazonアソシエイトとして、sin1's studioは適格販売により収入を得ています。</p>
+    </section>
+    <!-- 広告枠：AdSense 等のコードをこの div 内に挿入 -->
+    <div id="ad-slot" aria-label="advertisement"></div>
+    <footer class="credit">
+      <a href="https://sin1.studio" target="_blank" rel="noopener"><img class="brand-logo" src="img/sss_logo_washi.png" alt="sin1's studio" width="132" height="44"></a>
+    </footer>
+  </section>
+
+  <!-- 銘定表 -->
+  <div id="modal-scores" class="modal hidden">
+    <div class="modal-inner">
+      <h2>銘定表</h2>
+      <p class="modal-note">扇・蝶・枕のかたちに、源氏物語五十四帖の名を借りて点を定めます。</p>
+      <table id="mei-table"></table>
+      <p class="modal-note">【流派について】銘とその点は流派ごとに異なります。本作の銘定は、都御流の源氏物語形式を基に、御扇流・其扇流などの定めを参考にした独自のものです。</p>
+      <button class="btn-sub btn-close">閉じる</button>
+    </div>
+  </div>
+
+  <!-- 手ほどき -->
+  <div id="modal-tips" class="modal hidden">
+    <div class="modal-inner">
+      <h2>手ほどき</h2>
+      <ol id="tips-list">
+        <li><b>ふわりと投じる。</b>力任せは扇の乱れのもと。枕を倒せば「野分」、大きく点を失います。</li>
+        <li><b>狙いは蝶の下端。</b>裾を掬うように当てると、蝶は宙に舞い、良い銘が生まれやすくなります。</li>
+        <li><b>枕の上端は禁物。</b>縁に扇が当たると「コツリ」。音は良くても点になりません。</li>
+        <li><b>呼吸を読む。</b>狙いは息づかいでわずかに揺れます。止まる一瞬を見極めて構えましょう。</li>
+        <li><b>かたちは時の運。</b>同じ投げでも結びは一度きり。それもまた一興です。</li>
+      </ol>
+      <button class="btn-sub btn-close">閉じる</button>
+    </div>
+  </div>
+
+  <!-- メニュー -->
+  <div id="modal-menu" class="modal hidden">
+    <div class="modal-inner">
+      <h2>小休止</h2>
+      <div class="menu-col">
+        <button id="btn-menu-scores" class="btn-sub">銘定表</button>
+        <button id="btn-menu-tips" class="btn-sub">手ほどき</button>
+        <button id="btn-menu-sound" class="btn-sub">音：鳴</button>
+        <button id="btn-menu-quit" class="btn-sub">表座敷へ戻る</button>
+      </div>
+      <button class="btn-sub btn-close">続ける</button>
+    </div>
+  </div>
+
+  <!-- 伝える画面：実際に決まった形・銘・点を大きく見せる（スクショしてポストする前提） -->
+  <section id="share-view" class="hidden">
+    <div class="sv-frame"></div>
+    <header class="sv-head">
+      <p class="sv-title">フィジカル投扇興</p>
+      <div id="sv-mei"></div>
+      <div id="sv-yomi"></div>
+      <div id="sv-pts"></div>
+      <div id="sv-desc"></div>
+    </header>
+    <footer class="sv-foot">
+      <div id="sv-total"></div>
+      <img class="sv-brand brand-logo" src="img/sss_logo_washi.png" alt="sin1's studio" width="150" height="50">
+      <p id="sv-hint">この画面をスクリーンショットして伝えよう</p>
+      <div class="row">
+        <button id="btn-sv-post" class="btn-sub">ポストする</button>
+        <button id="btn-sv-back" class="btn-sub">戻る</button>
+      </div>
+    </footer>
+  </section>
+
+  <div id="flash"></div>
+</div>
+<script type="module" src="main.js?v=31"></script>
+</body>
+</html>
