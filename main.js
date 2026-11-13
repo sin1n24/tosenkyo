@@ -74,7 +74,7 @@ const MEI_EN = {
 };
 const L = {
   ja: {
-    guideAim: '狙いを定める ― 指で引いて動かす',
+    guideAim: '狙う所に触れる ― 指を引いて微調整',
     guideSwipe: '下から上へ ふわりと払う',
     btnPlay: '遊 ぶ', btnScores: '銘定表', btnTips: '手ほどき', btnAimOk: '構え、よし',
     btnRetry: '今一度', btnShare: '結果を伝える', btnToTitle: '表座敷へ', btnMenuQuit: '表座敷へ戻る',
@@ -94,7 +94,7 @@ const L = {
     langBtn: 'English',
   },
   en: {
-    guideAim: 'Take aim — drag to move the reticle',
+    guideAim: 'Touch where to aim — drag to fine-tune',
     guideSwipe: 'Swipe up — a gentle toss',
     btnPlay: 'Play', btnScores: 'Scoring', btnTips: 'How to Play', btnAimOk: 'Ready',
     btnRetry: 'Once More', btnShare: 'Share', btnToTitle: 'Title', btnMenuQuit: 'Quit to Title',
