@@ -765,21 +765,28 @@ const camState = {
   toPos: new THREE.Vector3(), toLook: new THREE.Vector3(), toUp: new THREE.Vector3(),
   t: 1, dur: 1,
 };
-// 銘の札を出している間は、上半分に札、下半分に座敷を置き、枕を中心にゆっくり回って形を見せる
+// 銘の札を出している間は、上に札、その下の領域の真ん中に枕・蝶・扇の中心を置き、ゆっくり揺れて形を見せる
 const orbit = { on: false, init: false, c: new THREE.Vector3(), ang: 0, ang0: 0, r: 0.7, h: 0.4, t: 0, offset: false };
 function startOrbit() {
-  // 枕・蝶（と近くにある扇）が収まるように、中心と距離を広がりから決める
-  const pts = [makuraBody.position, choBody.position];
-  const fn = fanBody.position;
-  if (Math.hypot(fn.x - makuraBody.position.x, fn.z - makuraBody.position.z) < 0.8) pts.push(fn);
-  const cx = pts.reduce((a, q) => a + q.x, 0) / pts.length, cz = pts.reduce((a, q) => a + q.z, 0) / pts.length;
-  const spread = Math.max(...pts.map(q => Math.hypot(q.x - cx, q.z - cz)));
-  orbit.c.set(cx, 0.12, cz);
-  // 少し高い所から見下ろす（枕の真後ろに落ちた蝶も見えるように）
-  orbit.rT = THREE.MathUtils.clamp(0.72 + spread * 1.4, 0.72, 1.5);
-  orbit.hT = 0.62 + spread * 0.5;
+  // 枕・蝶・扇の三つの中心（高さも含む）を、回る中心であり画面の中心にする
+  const pts = [makuraBody.position, choBody.position, fanBody.position];
+  const cx = pts.reduce((a, q) => a + q.x, 0) / 3, cy = pts.reduce((a, q) => a + q.y, 0) / 3, cz = pts.reduce((a, q) => a + q.z, 0) / 3;
+  orbit.c.set(cx, cy, cz);
+  orbit.spread = Math.max(...pts.map(q => Math.hypot(q.x - cx, q.y - cy, q.z - cz))) + 0.1; // 物の大きさの分を足す
   orbit.on = true; orbit.init = false;
+  orbit.fit();
 }
+// 札の下に残る領域を測り、三つがその中に収まる距離と、中心をその領域の真ん中に描くずらしを決める
+orbit.fit = function () {
+  const H = innerHeight, W = innerWidth;
+  const tz = document.querySelector('#mei-card .tanzaku');
+  const top = tz ? Math.min(H * 0.6, tz.parentElement.getBoundingClientRect().top + tz.offsetTop + tz.offsetHeight + 8) : H * 0.4;
+  orbit.shiftY = (top + H) / 2 - H / 2;          // 下の領域の真ん中へ
+  const halfFrac = Math.min((H - top) / H, W / H); // 下の領域の高さ（幅が狭ければ幅）を画面の高さに対する割合で
+  const d = THREE.MathUtils.clamp(orbit.spread / (Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * halfFrac * 0.85), 0.55, 4);
+  const el = THREE.MathUtils.degToRad(38);         // 見下ろす角度
+  orbit.rT = d * Math.cos(el); orbit.hT = orbit.c.y + d * Math.sin(el);
+};
 function stopOrbit() { orbit.on = false; }
 function camGoto(pos, look, dur = 0.9, up = [0, 1, 0]) {
   orbit.init = false;
@@ -828,7 +835,7 @@ function updateCamera(dt) {
     orbit.offset = orbiting;
     if (!orbiting) { camera.clearViewOffset(); }
   }
-  if (orbiting) camera.setViewOffset(innerWidth, innerHeight, 0, -innerHeight * 0.24, innerWidth, innerHeight);
+  if (orbiting) camera.setViewOffset(innerWidth, innerHeight, 0, -(orbit.shiftY || 0), innerWidth, innerHeight);
   camera.up.copy(camState.up);
   camera.position.copy(camState.pos);
   camera.lookAt(camState.look);
@@ -1876,6 +1883,7 @@ function resize() {
   camera.updateProjectionMatrix();
   const dpr = devicePixelRatio || 1;
   trailCanvas.width = w * dpr; trailCanvas.height = h * dpr;
+  if (orbit.on) orbit.fit();
 }
 addEventListener('resize', resize);
 resize();
