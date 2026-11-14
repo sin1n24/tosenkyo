@@ -28,6 +28,7 @@ const CFG = {
   fixedDt: 1 / 120,
   throwsPerGame: 5,                             // 五投勝負
 };
+const VERSION = 'v1.2';  // 画面の隅に小さく出す。更新内容はブログ記事の冒頭に
 // スワイプの強さ→投げの強さ。真ん中寄りに縮めて、ちょうど良い強さを出しやすくする（2026-11-14）
 const POWER = { center: 0.6, gain: 0.75 };
 
@@ -1408,10 +1409,11 @@ function clearTrail() { trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.
 /* ---------- 月間番付（GAS Webアプリ＋スプレッドシート。gas/Code.js） ---------- */
 const RANK_URL = 'https://script.google.com/macros/s/AKfycbyb2z2263yJYfZV-wN_god5r3DwVmuA_ZH_0CwOoQRVWGDyR0k9YBLSdVsZ2a5tTpnS0g/exec';   // GAS Webアプリの /exec（空なら番付を出さない）
 let replay = null;     // 再生中の記録 { name, throws, i }
-let rankSent = false;
+let rankSent = false, rankReady = false;
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (t) => String(t).replace(/[&<>"']/g, c => ESC[c]);
-if (RANK_URL) show($('btn-rank'));
+// 受け皿が応答したときだけ番付を出す（GAS が使えない間はボタンも送信欄も出さない）
+if (RANK_URL) fetch(RANK_URL + '?n=1').then(x => x.json()).then(j => { if (j && j.ok) { rankReady = true; show($('btn-rank')); } }).catch(() => {});
 $('btn-rank').addEventListener('click', () => { snd.tap(); openRank(); });
 async function openRank() {
   const ja = lang === 'ja';
@@ -1466,7 +1468,7 @@ function startReplay(e) {
 function setupRankSubmit(isReplay) {
   const box = $('rank-submit');
   rankSent = false;
-  if (!RANK_URL || isReplay || throwResults.length !== CFG.throwsPerGame || throwResults.some(r => !r.input)) { hide(box); return; }
+  if (!rankReady || isReplay || throwResults.length !== CFG.throwsPerGame || throwResults.some(r => !r.input)) { hide(box); return; }
   try { $('rank-name').value = localStorage.getItem('tosenkyo_name') || ''; } catch (err) { /* 保存できない環境 */ }
   $('rank-msg').textContent = '';
   $('btn-rank-send').disabled = false;
@@ -1670,6 +1672,7 @@ function applyLang() {
   $('btn-start').textContent = T.btnPlay;
   $('btn-scores').textContent = T.btnScores;
   $('btn-tips').textContent = T.btnTips;
+  $('app-ver').textContent = VERSION;
   $('btn-rank').textContent = lang === 'ja' ? '番付' : 'Ranking';
   document.querySelector('#modal-rank h2').textContent = lang === 'ja' ? '月間番付' : 'Monthly Ranking';
   $('rank-note').textContent = lang === 'ja'
