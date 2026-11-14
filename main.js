@@ -1477,6 +1477,8 @@ function evaluateSwipe() {
   const power = POWER.center + (raw - POWER.center) * POWER.gain;
   // 方向（左右）
   const azimuth = THREE.MathUtils.clamp(dx / chord, -0.8, 0.8);
+  // ?debug の紹介動画づくり用：なぞった軌跡はそのまま見せ、投げる入力だけ決めたものに差し替える
+  if (DEBUG && window.dbgNext) { const t = window.dbgNext; window.dbgNext = null; aimWorld.set(t.x, t.y, 0); launchFan(t.p, t.a, t.f, t.g || {}); return; }
   launchFan(power, azimuth, form, { maxDev, chord, turnSum, firstDevSign });
 }
 
@@ -1924,6 +1926,7 @@ if (DEBUG) {
     return r.id;
   };
   window.dbgReplay = (throws, name = 'test') => startReplay({ name, throws });
+  window.dbgAim = (x, y) => { aim.x = x; aim.y = y; };
   window.dbgSeen = () => ({ ...seenUp });
   window.dbgEnv = () => ({ env: ENV, sig: physSig() });
   window.dbgInputs = () => throwResults.map(r => r.input);
