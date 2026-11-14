@@ -26,7 +26,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;500;700&family=Yuji+Syuku&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=19">
+<link rel="stylesheet" href="style.css?v=20">
 <script type="importmap">
 {
   "imports": {
@@ -90,6 +90,7 @@
       <div class="row">
         <button id="btn-scores" class="btn-sub">銘定表</button>
         <button id="btn-tips" class="btn-sub">手ほどき</button>
+        <button id="btn-rank" class="btn-sub hidden">番付</button>
       </div>
     </nav>
     <footer class="credit">
@@ -105,6 +106,12 @@
     <div id="result-comment"></div>
     <div id="result-best"></div>
     <ul id="result-list"></ul>
+    <!-- 月間番付に載せる（各投げの入力も送り、閲覧者のブラウザで計算し直して確かめる） -->
+    <div id="rank-submit" class="hidden">
+      <input id="rank-name" maxlength="12" autocomplete="nickname" placeholder="名前（12字まで）">
+      <button id="btn-rank-send" class="btn-sub">番付に載せる</button>
+      <p id="rank-msg"></p>
+    </div>
     <nav class="title-nav">
       <button id="btn-retry" class="btn-main">今一度</button>
       <div class="row">
@@ -137,6 +144,17 @@
       <table id="mei-table"></table>
       <p class="modal-note">【出現率について】物理計算で10万投を試した参考値です。</p>
       <p class="modal-note">【流派について】銘とその点は流派ごとに異なります。本作の銘定は、都御流の源氏物語形式を基に、御扇流・其扇流などの定めを参考にした独自のものです。</p>
+      <button class="btn-sub btn-close">閉じる</button>
+    </div>
+  </div>
+
+  <!-- 月間番付 -->
+  <div id="modal-rank" class="modal hidden">
+    <div class="modal-inner">
+      <h2>月間番付</h2>
+      <p class="modal-note" id="rank-month"></p>
+      <ol id="rank-list"></ol>
+      <p class="modal-note" id="rank-note">五投の合計点の順。「再生」でその五投を見られます。印「✓」は、あなたの端末で計算し直して同じ結果になった記録です。</p>
       <button class="btn-sub btn-close">閉じる</button>
     </div>
   </div>
@@ -194,6 +212,6 @@
 
   <div id="flash"></div>
 </div>
-<script type="module" src="main.js?v=51"></script>
+<script type="module" src="main.js?v=57"></script>
 </body>
 </html>

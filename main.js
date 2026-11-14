@@ -28,6 +28,8 @@ const CFG = {
   fixedDt: 1 / 120,
   throwsPerGame: 5,                             // 五投勝負
 };
+// スワイプの強さ→投げの強さ。真ん中寄りに縮めて、ちょうど良い強さを出しやすくする（2026-11-14）
+const POWER = { center: 0.6, gain: 0.75 };
 
 const MAKURA = { w: 0.09, h: 0.27, d: 0.09 };   // 底面正方形・背の高い台
 const CHO = { w: 0.09, h: 0.095 };
@@ -73,25 +75,25 @@ const MEI_EN = {
   nowaki:       'The pillow is toppled — a gale',
 };
 // 銘ごとのコツと出現率（参考値）。物理計算で試した結果から（2026-11-14、判定・物理の改訂後）
-//   r : 狙い・強さ・払い方をばらばらにした 10万投での割合
+//   r : 狙い・強さ・払い方をばらばらにした 10万投での割合（POWER で強さの効きを真ん中寄りにした後）
 //   rk: その銘のコツの範囲で投げた場合の割合（強さ×狙いの格子 約2万投から）
-// 強さの目安（scoresNote3 と同じ）：半分弱＝画面の高さの1/4を約0.4秒／半分ほど＝1/4を約0.3秒／やや強め＝1/3を約0.3秒
+// 強さの目安（scoresNote3 と同じ）：半分弱＝画面の高さの1/4を約0.5秒／半分ほど＝1/4を約0.4秒／やや強め＝1/3を約0.3秒
 const MEI_TIP = {
   yumeukihashi: { r: '0.4%', rk: '2.5%', ja: 'まっすぐ、やや強めで蝶の下半分を狙う。扇が床に触れず、枕と蝶だけに支えられて架かれば成る', en: 'Straight and a bit firm, aimed at the lower half of the butterfly. The fan must rest on the pillow and the butterfly alone, off the floor' },
-  kiritsubo:    { r: '0.03%', rk: '1.3%', ja: 'まっすぐ、半分ほどの力で蝶の上の方を。蝶を弾き出し、扇だけが床に触れず枕の上に残れば成る', en: 'Straight at about half strength, aimed high. Knock the butterfly off and leave the fan on the pillow, off the floor' },
-  mio:          { r: '0.3%', rk: '6%', ja: '桐壺と同じ投げ方で、蝶が倒れれば澪標。弧を描いてやや強めでも出やすい', en: 'Thrown like Kiritsubo — if the butterfly falls, it is Miotsukushi. A firm arcing swipe also works' },
+  kiritsubo:    { r: '0.04%', rk: '1.3%', ja: 'まっすぐ、半分ほどの力で蝶の上の方を。蝶を弾き出し、扇だけが床に触れず枕の上に残れば成る', en: 'Straight at about half strength, aimed high. Knock the butterfly off and leave the fan on the pillow, off the floor' },
+  mio:          { r: '0.4%', rk: '6%', ja: '桐壺と同じ投げ方で、蝶が倒れれば澪標。弧を描いてやや強めでも出やすい', en: 'Thrown like Kiritsubo — if the butterfly falls, it is Miotsukushi. A firm arcing swipe also works' },
   ukifune:      { r: '0.02%', rk: '0.3%', ja: '弧を描く払いで、半分ほどの力。蝶が床に触れず扇の上に立てば成る。とても珍しい', en: 'An arcing swipe at about half strength. The butterfly must stand on the fan, off the floor — very rare' },
-  akashi:       { r: '3%', rk: '9%', ja: 'まっすぐ、やや強めで蝶の下半分を。蝶が床に立てば成る', en: 'Straight and a bit firm, at the lower half of the butterfly — it must land standing' },
-  kobai:        { r: '0.3%', rk: '5%', ja: 'まっすぐ、半分弱の力で。扇が枕の上に立ち、蝶が立ったまま残れば成る', en: 'Straight, a little under half strength. The fan climbs onto the pillow while the butterfly stays standing' },
-  hananoen:     { r: '0.08%', rk: '0.5%', ja: '弧を描く払いで、やや強めに。蝶が床に着かず枕の縁に引っ掛かれば成る', en: 'An arcing swipe, a bit firm. The butterfly must catch on the pillow’s edge without touching the floor' },
-  suma:         { r: '3%', rk: '5%', ja: 'まっすぐ、やや強めで。夢浮橋のあと一歩', en: 'Straight and a bit firm — one step short of Yume no Ukihashi' },
-  yugao:        { r: '0.4%', rk: '4%', ja: '弧を描く払いで、半分ほどの力', en: 'An arcing swipe at about half strength' },
-  matsukaze:    { r: '1%', rk: '2%', ja: '半分ほどの力で蝶の上の方に当てると、蝶が枕の上に倒れて残る', en: 'Half strength at the top of the butterfly can leave it lying on the pillow' },
-  hanachirusato:{ r: '16%', ja: '蝶は落とせている。強さを少し変えると上位の銘へ', en: 'You hit the butterfly — adjust your strength a little for higher forms' },
-  sekiya:       { r: '14%', ja: '弱め（画面の1/4を約0.5秒）だと、蝶は残り扇が枕に触れる', en: 'A soft throw (a quarter of the screen in ~0.5 s) leaves the butterfly and touches the pillow' },
-  tenarai:      { r: '37%', ja: '強すぎると、扇は蝶を越えて飛び去る', en: 'Too strong and the fan sails over everything' },
-  kotsuri:      { r: '23%', ja: '弱すぎると、枕を打つだけで終わる', en: 'Too soft and the fan just taps the pillow' },
-  nowaki:       { r: '2.5%', ja: 'とても強い払い、とくに弧・円・ジグザグで枕を倒しやすい', en: 'Very hard swipes — especially arcs, circles and zigzags — topple the pillow' },
+  akashi:       { r: '3.5%', rk: '9%', ja: 'まっすぐ、やや強めで蝶の下半分を。蝶が床に立てば成る', en: 'Straight and a bit firm, at the lower half of the butterfly — it must land standing' },
+  kobai:        { r: '0.35%', rk: '5%', ja: 'まっすぐ、半分弱の力で。扇が枕の上に立ち、蝶が立ったまま残れば成る', en: 'Straight, a little under half strength. The fan climbs onto the pillow while the butterfly stays standing' },
+  hananoen:     { r: '0.09%', rk: '0.5%', ja: '弧を描く払いで、やや強めに。蝶が床に着かず枕の縁に引っ掛かれば成る', en: 'An arcing swipe, a bit firm. The butterfly must catch on the pillow’s edge without touching the floor' },
+  suma:         { r: '3.4%', rk: '5%', ja: 'まっすぐ、やや強めで。夢浮橋のあと一歩', en: 'Straight and a bit firm — one step short of Yume no Ukihashi' },
+  yugao:        { r: '0.5%', rk: '4%', ja: '弧を描く払いで、半分ほどの力', en: 'An arcing swipe at about half strength' },
+  matsukaze:    { r: '1.3%', rk: '2%', ja: '半分ほどの力で蝶の上の方に当てると、蝶が枕の上に倒れて残る', en: 'Half strength at the top of the butterfly can leave it lying on the pillow' },
+  hanachirusato:{ r: '20%', ja: '蝶は落とせている。強さを少し変えると上位の銘へ', en: 'You hit the butterfly — adjust your strength a little for higher forms' },
+  sekiya:       { r: '16%', ja: '弱め（画面の1/5をゆっくり約0.8秒）だと、蝶は残り扇が枕に触れる', en: 'A soft throw (a fifth of the screen, slowly, ~0.8 s) leaves the butterfly and touches the pillow' },
+  tenarai:      { r: '25%', ja: '強すぎると、扇は蝶を越えて飛び去る', en: 'Too strong and the fan sails over everything' },
+  kotsuri:      { r: '27%', ja: '弱すぎると、枕を打つだけで終わる', en: 'Too soft and the fan just taps the pillow' },
+  nowaki:       { r: '1.5%', ja: 'とても強い払い、とくに弧・円・ジグザグで枕を倒しやすい', en: 'Very hard swipes — especially arcs, circles and zigzags — topple the pillow' },
 };
 function meiTipHtml(id) {
   const t = MEI_TIP[id];
@@ -111,7 +113,7 @@ const L = {
     btnResume: '続ける', btnClose: '閉じる', soundOn: '音：鳴', soundOff: '音：消',
     resultLabel: '結びの一巻', bestLabel: 'これまでの最高 ',
     scoresNote1: '扇・蝶・枕のかたちに、源氏物語五十四帖の名を借りて点を定めます。',
-    scoresNote3: '【出現率について】物理計算で10万投を試した参考値です（狙い・強さ・払い方をばらばらにした場合）。「コツ通り」は、その銘のコツの範囲で投げた場合の割合です。強さの目安は、半分弱＝画面の高さの1/4を約0.4秒、半分ほど＝1/4を約0.3秒、やや強め＝1/3を約0.3秒で払う程度。結果は端末の速さによらず同じです。',
+    scoresNote3: '【出現率について】物理計算で10万投を試した参考値です（狙い・強さ・払い方をばらばらにした場合）。「コツ通り」は、その銘のコツの範囲で投げた場合の割合です。強さの目安は、半分弱＝画面の高さの1/4を約0.5秒、半分ほど＝1/4を約0.4秒、やや強め＝1/3を約0.3秒で払う程度。結果は端末の速さによらず同じです。',
     scoresNote2: '【流派について】銘とその点は流派ごとに異なります。本作の銘定は、都御流の源氏物語形式を基に、御扇流・其扇流などの定めを参考にした独自のものです。',
     tips: [
       '<b>ふわりと投じる。</b>力任せは扇の乱れのもと。枕を倒せば「野分」、大きく点を失います。',
@@ -132,7 +134,7 @@ const L = {
     btnResume: 'Resume', btnClose: 'Close', soundOn: 'Sound: On', soundOff: 'Sound: Off',
     resultLabel: 'Final Tally', bestLabel: 'Best: ',
     scoresNote1: 'Each final arrangement of fan, butterfly and pillow is a “mei” — a form named after a chapter of the Tale of Genji, each worth its own points.',
-    scoresNote3: 'About the rates: reference values from 100,000 simulated throws with random aim, strength and swipe. “With the tip” is the rate when throwing as the tip says. Strength guide: a little under half = a quarter of the screen height in ~0.4 s; about half = a quarter in ~0.3 s; a bit firm = a third in ~0.3 s. Results are the same on any device.',
+    scoresNote3: 'About the rates: reference values from 100,000 simulated throws with random aim, strength and swipe. “With the tip” is the rate when throwing as the tip says. Strength guide: a little under half = a quarter of the screen height in ~0.5 s; about half = a quarter in ~0.4 s; a bit firm = a third in ~0.3 s. Results are the same on any device.',
     scoresNote2: 'About schools: forms and points vary by school. This game uses its own scoring based on the Miyako-Goryu Genji style, with reference to the Gosen-ryu and Kisen-ryu schools.',
     tips: [
       '<b>Toss gently.</b> Throwing hard scatters the fan — topple the pillow and “Nowaki” costs you 30 points.',
@@ -184,7 +186,7 @@ function env(g, t0, a, d, peak = 1) {
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + a + d);
 }
 function tone(freq, type, a, d, peak, detune = 0, when = 0) {
-  if (muted) return;
+  if (muted || simMode) return;
   const c = audio(), t0 = c.currentTime + when;
   const o = c.createOscillator(), g = c.createGain();
   o.type = type; o.frequency.value = freq; o.detune.value = detune;
@@ -193,7 +195,7 @@ function tone(freq, type, a, d, peak, detune = 0, when = 0) {
   o.start(t0); o.stop(t0 + a + d + 0.05);
 }
 function noiseBurst(dur, peak, filterFreq, when = 0) {
-  if (muted) return;
+  if (muted || simMode) return;
   const c = audio(), t0 = c.currentTime + when;
   const len = Math.max(1, (dur * c.sampleRate) | 0);
   const buf = c.createBuffer(1, len, c.sampleRate);
@@ -607,6 +609,7 @@ const AERO = {
   kLift: 0.025, kFloat: 0.75,       // kFloat: 飛翔中の見かけ重力軽減率
   kFlutter: 0.0005, kAlign: 0.0008, // kAlign: 面を上に保つ復元（滑空姿勢）
   vMax: 5, wMax: 10,                // 発散防止の上限
+  kSpentM: 7,                       // 枕に触れた後の勢いの尽き方（枕の上に残りやすくなる）
   kSpent: 7,                        // 当たった後に扇の勢いが尽きる速さ（大きいほど枕の近くに留まる）
 };
 const _v = new CANNON.Vec3(), _n = new CANNON.Vec3(), _tmp = new CANNON.Vec3();
@@ -687,7 +690,8 @@ function calmSettling(dt) {
   if (!impacted && fanBody.position.z > -0.15) return;
   if (impacted) {
     // 当たった後の扇は力尽きる：全体を減衰し、手前への跳ね返りは殺す
-    fanBody.velocity.scale(Math.max(0, 1 - AERO.kSpent * dt), fanBody.velocity);
+    const k = contacts.fanMakura ? Math.max(AERO.kSpent, AERO.kSpentM) : AERO.kSpent;  // 枕に触れた後は早く止まる
+    fanBody.velocity.scale(Math.max(0, 1 - k * dt), fanBody.velocity);
     if (fanBody.velocity.z > 0.4) fanBody.velocity.z *= 0.4;
   }
   for (const b of [fanBody, choBody]) {
@@ -722,6 +726,7 @@ scene.add(points);
 let pHead = 0;
 const _c = new THREE.Color();
 function spawnBurst(pos, colorHex, n, speed) {
+  if (simMode) return;
   _c.set(colorHex);
   for (let i = 0; i < n; i++) {
     const idx = pHead; pHead = (pHead + 1) % PN;
@@ -870,6 +875,22 @@ function startAim() {
   setGuide(L[lang].guideAim);
   show($('btn-aim-ok'));
   clearTrail();
+  if (replay) {
+    // 再生：記録の入力そのままで投げる（狙いの位置を見せてから）
+    hide($('btn-aim-ok'));
+    setGuide((lang === 'ja' ? '再生：' : 'Replay: ') + replay.name);
+    const t = replay.throws[replay.i++];
+    aim.x = t.x; aim.y = t.y;
+    setTimeout(() => {
+      if (state !== 'aim' || !replay) return;
+      startSwipe();
+      setTimeout(() => {
+        if (state !== 'swipe' || !replay) return;
+        aimWorld.set(t.x, t.y, 0);
+        launchFan(t.p, t.a, t.f, t.g || {});
+      }, 900);
+    }, 1100);
+  }
 }
 function startSwipe() {
   state = 'swipe';
@@ -885,9 +906,10 @@ function startSwipe() {
 }
 function launchFan(power, azimuth, form = 'straight', g = {}) {
   state = 'flight';
-  setGuide(null);
-  hide(reticleEl);
-  snd.whoosh();
+  // 番付に載せる・再生で確かめるための入力（同じ入力なら必ず同じ結果になる）
+  lastInput = { p: power, x: aimWorld.x, y: aimWorld.y, a: azimuth, f: form, g: {} };
+  for (const k of ['maxDev', 'chord', 'turnSum', 'firstDevSign']) if (typeof g[k] === 'number') lastInput.g[k] = g[k];
+  if (!simMode) { setGuide(null); hide(reticleEl); snd.whoosh(); }
   fanBody.type = CANNON.Body.DYNAMIC;
   fanBody.updateMassProperties();
   fanBody.wakeUp();
@@ -922,7 +944,7 @@ function launchFan(power, azimuth, form = 'straight', g = {}) {
     pendingSpin.pitch = 6 * (g.firstDevSign || 1);
   }
   fanBody.angularVelocity.set(0, yawSpin, 0);
-  camGoto([0.52, 0.42, 1.05], [0, 0.25, 0.3], 0.8);
+  if (!simMode) camGoto([0.52, 0.42, 1.05], [0, 0.25, 0.3], 0.8);
   flightT = 0;
 }
 function onFirstImpact() {
@@ -945,13 +967,32 @@ function touchNow() {
     ff: has(fanBody, floorBody), cf: has(choBody, floorBody),
   };
 }
+const JUDGE = { choUp: 0.72 };  // 蝶が「立っている」とみなす傾きの限度（上向き成分。0.72 ≒ 44°まで）
+let lastInput = null;
+// 物理・判定を変えたら上げる。番付の記録はこの版が同じものだけ再生で確かめる
+const PHYS_VER = 'p2';
+function simThrow(inp, frameDt = 1 / 60) {
+  const keep = state;
+  simMode = true;
+  state = 'aim'; resetBodies();
+  aimWorld.set(inp.x, inp.y, 0);
+  fanBody.position.set(CFG.handPos.x, CFG.handPos.y, CFG.handPos.z);
+  fanBody.quaternion.setFromEuler(0.15, 0, 0);
+  launchFan(inp.p, inp.a, inp.f, inp.g || {});
+  simSettled = false;
+  for (let frames = 0; !simSettled && frames < 4000; frames++) stepPhysics(frameDt);
+  const r = judge();
+  simMode = false;
+  state = keep;
+  return r.id;
+}
 // 判定：止まった時点で「実際に触れ合っているか」で形を決める（距離だけで決めない）
 function judge() {
   const t = touchNow();
   const mk = makuraBody.position, ch = choBody.position, fn = fanBody.position;
   const mkTop = mk.y + MAKURA.h / 2;
   const makuraDown = upY(makuraBody) < 0.55;
-  const choUp = upY(choBody) > 0.72;
+  const choUp = upY(choBody) > JUDGE.choUp;
   // 蝶が枕の上に載っている
   const choOnMakura = !makuraDown && t.cm && ch.y > mkTop - 0.03;
   // 扇が床に触れず、枕の上に掛かっている
@@ -998,6 +1039,7 @@ function finishThrow() {
   state = 'judge';
   const res = judge();
   res.snap = [makuraBody, choBody, fanBody].map(b => ({ p: b.position.clone(), q: b.quaternion.clone() })); // 伝える画面用
+  res.input = lastInput;
   throwResults.push(res);
   totalScore += res.pts;
   camGoto([0.40, 0.34, 0.66], [0, 0.16, 0], 1.1);
@@ -1211,12 +1253,18 @@ const RANKS = [
 function showResult() {
   state = 'result';
   hide($('hud'));
+  const isReplay = !!replay;
+  $('screen-result').querySelector('.result-label').textContent = isReplay
+    ? (lang === 'ja' ? '再生：' : 'Replay: ') + replay.name
+    : L[lang].resultLabel;
+  replay = null;
+  setupRankSubmit(isReplay);
   const rank = RANKS.find(r => totalScore >= r.min);
   $('result-total').textContent = totalLabel(totalScore);
   $('result-rank').textContent = '「' + rank.name + '」';
   $('result-comment').textContent = lang === 'ja' ? rank.comment : rank.en;
   const best = Number(localStorage.getItem('tosenkyo_best') || '-9999');
-  const isNew = totalScore > best;
+  const isNew = !isReplay && totalScore > best;
   if (isNew) localStorage.setItem('tosenkyo_best', String(totalScore));
   const bestEl = $('result-best');
   bestEl.textContent = L[lang].bestLabel + totalLabel(Math.max(best, totalScore));
@@ -1246,6 +1294,7 @@ let dragActive = false, lastPX = 0, lastPY = 0;
 const aimRay = new THREE.Raycaster(), aimPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), aimHit = new THREE.Vector3();
 inputLayer.addEventListener('pointerdown', (e) => {
   audio();
+  if (replay) return;  // 再生中は触っても投げない
   if (state === 'aim') {
     dragActive = true; lastPX = e.clientX; lastPY = e.clientY;
     // 触れた場所へ照準を移す（その後のドラッグは微調整）
@@ -1329,7 +1378,8 @@ function evaluateSwipe() {
   const dur = Math.max(60, p1.t - p0.t);
   const speedPx = chord / dur; // px/ms
   const hRef = Math.min(innerHeight, 800);
-  const power = THREE.MathUtils.clamp(0.55 * (chord / (hRef * 0.55)) + 0.6 * (speedPx / 1.6), 0.08, 1);
+  const raw = THREE.MathUtils.clamp(0.55 * (chord / (hRef * 0.55)) + 0.6 * (speedPx / 1.6), 0.08, 1);
+  const power = POWER.center + (raw - POWER.center) * POWER.gain;
   // 方向（左右）
   const azimuth = THREE.MathUtils.clamp(dx / chord, -0.8, 0.8);
   launchFan(power, azimuth, form, { maxDev, chord, turnSum, firstDevSign });
@@ -1355,6 +1405,93 @@ function drawTrail() {
 }
 function clearTrail() { trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height); }
 
+/* ---------- 月間番付（GAS Webアプリ＋スプレッドシート。gas/Code.js） ---------- */
+const RANK_URL = 'https://script.google.com/macros/s/AKfycbyb2z2263yJYfZV-wN_god5r3DwVmuA_ZH_0CwOoQRVWGDyR0k9YBLSdVsZ2a5tTpnS0g/exec';   // GAS Webアプリの /exec（空なら番付を出さない）
+let replay = null;     // 再生中の記録 { name, throws, i }
+let rankSent = false;
+const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const esc = (t) => String(t).replace(/[&<>"']/g, c => ESC[c]);
+if (RANK_URL) show($('btn-rank'));
+$('btn-rank').addEventListener('click', () => { snd.tap(); openRank(); });
+async function openRank() {
+  const ja = lang === 'ja';
+  show($('modal-rank'));
+  const list = $('rank-list');
+  list.innerHTML = `<li class="empty">${ja ? '読み込み中…' : 'Loading…'}</li>`;
+  try {
+    const r = await fetch(RANK_URL + '?n=20').then(x => x.json());
+    const [y, m] = r.month.split('-');
+    $('rank-month').textContent = ja ? `${+y}年${+m}月` : r.month;
+    if (!r.list.length) { list.innerHTML = `<li class="empty">${ja ? 'まだ記録がありません。最初の一人にどうぞ。' : 'No entries yet — be the first.'}</li>`; return; }
+    list.innerHTML = '';
+    r.list.forEach((e, i) => {
+      const best = e.ids.reduce((b, id) => (MEI[id].pts > MEI[b].pts ? id : b), e.ids[0]);
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="no">${i + 1}</span><span class="nm">${esc(e.name)}</span><span class="tt">${totalLabel(e.total)}</span>` +
+        `<span class="mm">${ja ? '最高' : 'Best'}「${MEI[best].name}」 <span class="ck">…</span></span>` +
+        `<button class="btn-sub">${ja ? '再生' : 'Replay'}</button>`;
+      li.querySelector('button').addEventListener('click', () => { snd.tap(); startReplay(e); });
+      e.ck = li.querySelector('.ck');
+      list.appendChild(li);
+    });
+    verifyEntries(r.list);
+  } catch (err) {
+    list.innerHTML = `<li class="empty">${ja ? '番付を読み込めませんでした。' : 'Could not load the ranking.'}</li>`;
+  }
+}
+// 記録の入力で五投を計算し直し、銘が同じか確かめる（一件ずつ、画面を止めないように）
+function verifyEntries(list) {
+  const ja = lang === 'ja';
+  let i = 0;
+  const step = () => {
+    if (i >= list.length || $('modal-rank').classList.contains('hidden') || state !== 'title') { if (state === 'title') resetBodies(); return; }
+    const e = list[i++];
+    if (e.ver !== PHYS_VER) e.ck.textContent = ja ? '旧版の記録' : 'older version';
+    else {
+      let ok = false;
+      try { ok = e.throws.every((t, k) => simThrow(t) === e.ids[k]); } catch (err) { ok = false; }
+      e.ck.textContent = ok ? (ja ? '✓ 再生で確認' : '✓ verified') : (ja ? '⚠ 再生と不一致' : '⚠ mismatch');
+      e.ck.classList.add(ok ? 'ok' : 'ng');
+    }
+    setTimeout(step, 30);
+  };
+  step();
+}
+function startReplay(e) {
+  hide($('modal-rank'));
+  resetBodies();
+  replay = { name: e.name, throws: e.throws, i: 0 };
+  startGame();
+}
+function setupRankSubmit(isReplay) {
+  const box = $('rank-submit');
+  rankSent = false;
+  if (!RANK_URL || isReplay || throwResults.length !== CFG.throwsPerGame || throwResults.some(r => !r.input)) { hide(box); return; }
+  try { $('rank-name').value = localStorage.getItem('tosenkyo_name') || ''; } catch (err) { /* 保存できない環境 */ }
+  $('rank-msg').textContent = '';
+  $('btn-rank-send').disabled = false;
+  show(box);
+}
+$('btn-rank-send').addEventListener('click', async () => {
+  const ja = lang === 'ja';
+  if (rankSent) return;
+  const name = $('rank-name').value.trim();
+  if (!name) { $('rank-msg').textContent = ja ? '名前を入れてください' : 'Enter a name'; return; }
+  try { localStorage.setItem('tosenkyo_name', name); } catch (err) { /* 保存できない環境 */ }
+  snd.tap();
+  rankSent = true; $('btn-rank-send').disabled = true;
+  $('rank-msg').textContent = ja ? '送っています…' : 'Sending…';
+  try {
+    const body = { name, total: totalScore, ids: throwResults.map(r => r.id), throws: throwResults.map(r => r.input), ver: PHYS_VER };
+    const r = await fetch(RANK_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) }).then(x => x.json());
+    if (!r.ok) throw new Error(r.error);
+    $('rank-msg').textContent = ja ? `今月の番付 ${r.rank}位 に載りました（${r.count}件中）` : `You are #${r.rank} this month (of ${r.count})`;
+  } catch (err) {
+    rankSent = false; $('btn-rank-send').disabled = false;
+    $('rank-msg').textContent = ja ? '送れませんでした。少し置いてもう一度どうぞ。' : 'Could not send — please try again.';
+  }
+});
+
 /* ---------- ボタン ---------- */
 $('btn-start').addEventListener('click', () => { snd.tap(); startGame(); });
 $('btn-aim-ok').addEventListener('click', () => { snd.tap(); startSwipe(); });
@@ -1373,6 +1510,7 @@ $('btn-menu-sound').addEventListener('click', (e) => {
   if (!muted) snd.tap();
 });
 $('btn-menu-quit').addEventListener('click', () => {
+  replay = null;
   hide($('modal-menu')); hide($('hud')); hide(reticleEl); hide($('btn-aim-ok'));
   hide($('mei-card')); setGuide(null); clearTrail();
   resetBodies(); state = 'title'; show($('screen-title'));
@@ -1532,6 +1670,13 @@ function applyLang() {
   $('btn-start').textContent = T.btnPlay;
   $('btn-scores').textContent = T.btnScores;
   $('btn-tips').textContent = T.btnTips;
+  $('btn-rank').textContent = lang === 'ja' ? '番付' : 'Ranking';
+  document.querySelector('#modal-rank h2').textContent = lang === 'ja' ? '月間番付' : 'Monthly Ranking';
+  $('rank-note').textContent = lang === 'ja'
+    ? '五投の合計点の順。「再生」でその五投を見られます。印「✓」は、あなたの端末で計算し直して同じ結果になった記録です。'
+    : 'Ranked by five-throw total. “Replay” shows those five throws. “✓” means your device recomputed them and got the same result.';
+  $('rank-name').placeholder = lang === 'ja' ? '名前（12字まで）' : 'Name (up to 12)';
+  $('btn-rank-send').textContent = lang === 'ja' ? '番付に載せる' : 'Add to ranking';
   $('btn-aim-ok').textContent = T.btnAimOk;
   $('btn-retry').textContent = T.btnRetry;
   $('btn-share').textContent = T.btnShare;
@@ -1587,7 +1732,7 @@ resize();
 
 /* ---------- デバッグ ---------- */
 if (DEBUG) {
-  window.CFG = CFG; window.AERO = AERO;
+  window.CFG = CFG; window.AERO = AERO; window.JUDGE = JUDGE;
   window.dbgBodies = { fanBody, choBody, makuraBody };
   window.dbgState = () => state;
   window.dbgStart = () => startGame();
@@ -1599,18 +1744,9 @@ if (DEBUG) {
   };
   // 検証用：描画せずに一投を最後まで計算して銘を返す（実際の物理・判定と同じ関数を使う）
   window.dbgSim = (power, ax, ay, azimuth = 0, form = 'straight', g = {}, frameDt = 1 / 60) => {
-    state = 'aim'; resetBodies();
-    aim.x = ax; aim.y = ay; aimWorld.set(ax, ay, 0);
-    fanBody.position.set(CFG.handPos.x, CFG.handPos.y, CFG.handPos.z);
-    fanBody.quaternion.setFromEuler(0.15, 0, 0);
-    launchFan(power, azimuth, form, g);
-    simMode = true; simSettled = false;
-    for (let frames = 0; !simSettled && frames < 4000; frames++) stepPhysics(frameDt);
-    simMode = false;
-    const r = judge();
+    const id = simThrow({ p: power, x: ax, y: ay, a: azimuth, f: form, g }, frameDt);
     state = 'title';
-    window.lastPoseSnap = physBodies.map(b => ({ p: [b.position.x, b.position.y, b.position.z].map(v => +v.toFixed(4)), q: [b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w].map(v => +v.toFixed(4)) }));
-    return r.id;
+    return id;
   };
   // 判定設計用：一投の終わりの様子（接触・姿勢・位置）
   window.dbgSimDesc = (...args) => {
@@ -1629,6 +1765,9 @@ if (DEBUG) {
     const r = judge(); fanBody.type = fanType; fanBody.updateMassProperties(); state = keep;
     return r.id;
   };
+  window.dbgReplay = (throws, name = 'test') => startReplay({ name, throws });
+  window.dbgInputs = () => throwResults.map(r => r.input);
+  window.dbgVerify = (throws) => throws.map(t => simThrow(t));
   window.dbgShare = (i = -1) => { const r = throwResults.at(i); showMeiPose(r.id, { res: r, line: 'debug', total: false }); };
   // 告知画像用：見本の配置で「伝える画面」を出す（line は下段の文言）
   window.dbgShareMei = (id, line = '') => {

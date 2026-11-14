@@ -670,3 +670,23 @@ html.en #mei-points { padding-top: 18px; }
 /* 銘定表：コツと出現率（参考値） */
 #mei-table td.n .tip { display: block; margin-top: 5px; font-size: 11px; font-weight: 400; line-height: 1.6; color: var(--washi-dim); letter-spacing: .05em; }
 #mei-table td.n .rate { display: block; margin-top: 2px; font-size: 10.5px; font-weight: 400; color: var(--gold); letter-spacing: .05em; }
+
+/* 月間番付 */
+#rank-submit { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; width: min(92vw, 360px); }
+#rank-submit.hidden { display: none; }
+#rank-name { flex: 1 1 150px; min-width: 0; padding: 9px 10px; font: inherit; font-size: 15px; color: var(--washi);
+  background: rgba(22,16,19,.72); border: 1px solid rgba(201,162,75,.5); border-radius: 2px; }
+#btn-rank-send { padding: 9px 14px; }
+#rank-msg { flex-basis: 100%; margin: 0; min-height: 1.2em; text-align: center; font-size: 12px; color: var(--washi-dim); }
+#rank-list { list-style: none; margin: 4px 0 8px; padding: 0; }
+#rank-list li { display: grid; grid-template-columns: 2.2em 1fr auto; gap: 2px 8px; align-items: center;
+  padding: 8px 2px; border-bottom: 1px solid rgba(201,162,75,.16); }
+#rank-list .no { color: var(--gold-bright); text-align: center; }
+#rank-list .nm { color: var(--washi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#rank-list .tt { color: var(--gold-bright); white-space: nowrap; text-align: right; }
+#rank-list .mm { grid-column: 2 / 3; font-size: 11px; color: var(--washi-dim); }
+#rank-list .ck { font-size: 11px; color: var(--washi-dim); }
+#rank-list .ck.ok { color: #9fc38f; }
+#rank-list .ck.ng { color: #d98b7a; }
+#rank-list button { grid-column: 3 / 4; padding: 4px 10px; font-size: 12px; }
+#rank-list .empty { display: block; text-align: center; color: var(--washi-dim); border: 0; }
