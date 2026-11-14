@@ -28,7 +28,7 @@ const CFG = {
   fixedDt: 1 / 120,
   throwsPerGame: 5,                             // 五投勝負
 };
-const VERSION = 'v1.2';  // 画面の隅に小さく出す。更新内容はブログ記事の冒頭に
+const VERSION = 'v1.3';  // 画面の隅に小さく出す。更新内容はブログ記事の冒頭に
 // スワイプの強さ→投げの強さ。真ん中寄りに縮めて、ちょうど良い強さを出しやすくする（2026-11-14）
 const POWER = { center: 0.6, gain: 0.75 };
 
@@ -37,7 +37,7 @@ const CHO = { w: 0.09, h: 0.095 };
 
 /* ---------- 銘定 ---------- */
 const MEI = {
-  yumeukihashi: { name: '夢浮橋', yomi: 'ゆめのうきはし', romaji: 'Yume no Ukihashi', pts: 100, desc: '扇は蝶と枕の橋となる' },
+  yumeukihashi: { name: '夢浮橋', yomi: 'ゆめのうきはし', romaji: 'Yume no Ukihashi', pts: 100, desc: '扇は立つ蝶と枕の橋となる' },
   kiritsubo:    { name: '桐壺',   yomi: 'きりつぼ',       romaji: 'Kiritsubo',        pts: 75,  desc: '扇は枕に 蝶は立ちて落つ' },
   mio:          { name: '澪標',   yomi: 'みおつくし',     romaji: 'Miotsukushi',      pts: 40,  desc: '扇 枕の上に憩う' },
   ukifune:      { name: '浮舟',   yomi: 'うきふね',       romaji: 'Ukifune',          pts: 30,  desc: '落ちた扇に蝶が乗る' },
@@ -59,7 +59,7 @@ const MEI_ORDER = ['yumeukihashi','kiritsubo','mio','ukifune','akashi','kobai','
 /* ---------- 言語（銘・タイトルは常に日本語、説明系のみ切替） ---------- */
 let lang = localStorage.getItem('tosenkyo_lang') || 'ja';
 const MEI_EN = {
-  yumeukihashi: 'The fan rests bridging pillow and butterfly',
+  yumeukihashi: 'The fan bridges the pillow and a standing butterfly',
   kiritsubo:    'Fan on the pillow; the butterfly falls yet stands',
   mio:          'The fan comes to rest atop the pillow',
   ukifune:      'The butterfly rides the fallen fan',
@@ -80,14 +80,14 @@ const MEI_EN = {
 //   rk: その銘のコツの範囲で投げた場合の割合（強さ×狙いの格子 約2万投から）
 // 強さの目安（scoresNote3 と同じ）：半分弱＝画面の高さの1/4を約0.5秒／半分ほど＝1/4を約0.4秒／やや強め＝1/3を約0.3秒
 const MEI_TIP = {
-  yumeukihashi: { r: '0.4%', rk: '2.5%', ja: 'まっすぐ、やや強めで蝶の下半分を狙う。扇が床に触れず、枕と蝶だけに支えられて架かれば成る', en: 'Straight and a bit firm, aimed at the lower half of the butterfly. The fan must rest on the pillow and the butterfly alone, off the floor' },
+  yumeukihashi: { r: '0.006%', rk: '0.2%', ja: 'まっすぐ、やや強めで蝶の上半分を狙う（狙いが高いほど、ほんの少し弱く）。蝶が立ったまま、扇が床に触れず枕と蝶の頭に架かれば成る。幻に近い', en: 'Straight and a bit firm, aimed at the upper half of the butterfly (a touch softer the higher you aim). The butterfly must stay standing while the fan rests on the pillow and its head, off the floor — nearly a phantom' },
   kiritsubo:    { r: '0.04%', rk: '1.3%', ja: 'まっすぐ、半分ほどの力で蝶の上の方を。蝶を弾き出し、扇だけが床に触れず枕の上に残れば成る', en: 'Straight at about half strength, aimed high. Knock the butterfly off and leave the fan on the pillow, off the floor' },
   mio:          { r: '0.4%', rk: '6%', ja: '桐壺と同じ投げ方で、蝶が倒れれば澪標。弧を描いてやや強めでも出やすい', en: 'Thrown like Kiritsubo — if the butterfly falls, it is Miotsukushi. A firm arcing swipe also works' },
   ukifune:      { r: '0.02%', rk: '0.3%', ja: '弧を描く払いで、半分ほどの力。蝶が床に触れず扇の上に立てば成る。とても珍しい', en: 'An arcing swipe at about half strength. The butterfly must stand on the fan, off the floor — very rare' },
   akashi:       { r: '3.5%', rk: '9%', ja: 'まっすぐ、やや強めで蝶の下半分を。蝶が床に立てば成る', en: 'Straight and a bit firm, at the lower half of the butterfly — it must land standing' },
   kobai:        { r: '0.35%', rk: '5%', ja: 'まっすぐ、半分弱の力で。扇が枕の上に立ち、蝶が立ったまま残れば成る', en: 'Straight, a little under half strength. The fan climbs onto the pillow while the butterfly stays standing' },
   hananoen:     { r: '0.09%', rk: '0.5%', ja: '弧を描く払いで、やや強めに。蝶が床に着かず枕の縁に引っ掛かれば成る', en: 'An arcing swipe, a bit firm. The butterfly must catch on the pillow’s edge without touching the floor' },
-  suma:         { r: '3.4%', rk: '5%', ja: 'まっすぐ、やや強めで。夢浮橋のあと一歩', en: 'Straight and a bit firm — one step short of Yume no Ukihashi' },
+  suma:         { r: '3.7%', rk: '5%', ja: 'まっすぐ、やや強めで。夢浮橋のあと一歩', en: 'Straight and a bit firm — one step short of Yume no Ukihashi' },
   yugao:        { r: '0.5%', rk: '4%', ja: '弧を描く払いで、半分ほどの力', en: 'An arcing swipe at about half strength' },
   matsukaze:    { r: '1.3%', rk: '2%', ja: '半分ほどの力で蝶の上の方に当てると、蝶が枕の上に倒れて残る', en: 'Half strength at the top of the butterfly can leave it lying on the pillow' },
   hanachirusato:{ r: '20%', ja: '蝶は落とせている。強さを少し変えると上位の銘へ', en: 'You hit the butterfly — adjust your strength a little for higher forms' },
@@ -971,7 +971,7 @@ function touchNow() {
 const JUDGE = { choUp: 0.72 };  // 蝶が「立っている」とみなす傾きの限度（上向き成分。0.72 ≒ 44°まで）
 let lastInput = null;
 // 物理・判定を変えたら上げる。番付の記録はこの版が同じものだけ再生で確かめる
-const PHYS_VER = 'p2';
+const PHYS_VER = 'p3';
 function simThrow(inp, frameDt = 1 / 60) {
   const keep = state;
   simMode = true;
@@ -1000,6 +1000,7 @@ function judge() {
   const fanOnMakura = !makuraDown && t.fm && !t.ff && fn.y > mkTop - 0.06;
   // 扇が床に触れず、枕と蝶だけに支えられている＝橋
   const bridge = !makuraDown && t.fm && t.fc && !t.ff;
+  // 夢浮橋は、立ったままの蝶と枕の間に扇が架かる形（蝶が倒れていれば橋でも須磨）
   // 蝶が床に触れず、扇の上に載っている
   const choOnFan = t.fc && !t.cf && !t.cm && ch.y > fn.y;
   // 蝶が床に触れず、枕の縁に引っ掛かっている
@@ -1015,7 +1016,7 @@ function judge() {
       else id = 'tenarai';
     } else id = 'matsukaze';
   } else {
-    if (bridge) id = 'yumeukihashi';
+    if (bridge && choUp) id = 'yumeukihashi';
     else if (fanOnMakura) id = choUp ? 'kiritsubo' : 'mio';
     else if (choHanging) id = 'hananoen';
     else if (choOnFan) id = choUp ? 'ukifune' : 'yugao';
