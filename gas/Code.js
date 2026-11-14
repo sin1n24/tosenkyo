@@ -6,6 +6,7 @@
  * 閲覧者のブラウザが同じ物理で計算し直して点数が本物か確かめる（ゲーム側の verifyEntry）。
  */
 const SHEET = 'scores';
+const ADMIN_KEY = '';  // 管理用（公開リポジトリの gas/Code.js では空）
 const PTS = { yumeukihashi: 100, kiritsubo: 75, mio: 40, ukifune: 30, akashi: 20, kobai: 20, hananoen: 12,
   suma: 10, yugao: 8, matsukaze: 5, hanachirusato: 3, sekiya: 1, tenarai: 0, kotsuri: -1, nowaki: -30 };
 const FORMS = ['straight', 'curve', 'circle', 'zigzag'];
@@ -49,6 +50,7 @@ function isNum_(v) { return typeof v === 'number' && isFinite(v); }
 function doPost(e) {
   let d;
   try { d = JSON.parse(e.postData.contents); } catch (err) { return json_({ ok: false, error: 'bad json' }); }
+  if (d.action === 'delete') return deleteByName_(d);
   const name = cleanName_(d.name);
   if (!name) return json_({ ok: false, error: 'name' });
   const ids = d.ids, th = d.throws;
@@ -84,6 +86,17 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// 管理用：今月の指定した名前の記録を消す（ADMIN_KEY が空なら無効）
+function deleteByName_(d) {
+  if (!ADMIN_KEY || d.key !== ADMIN_KEY) return json_({ ok: false, error: 'forbidden' });
+  const sh = sheet_(), vals = sh.getDataRange().getValues(), month = monthKey_();
+  let n = 0;
+  for (let r = vals.length - 1; r >= 1; r--) {
+    if (monthKeyOf_(vals[r][0]) === month && String(vals[r][2]) === String(d.name)) { sh.deleteRow(r + 1); n++; }
+  }
+  return json_({ ok: true, deleted: n });
 }
 
 // 初回だけエディタから実行して権限を承認する（承認しないと /exec が 403 になる）

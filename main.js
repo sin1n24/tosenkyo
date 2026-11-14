@@ -28,7 +28,7 @@ const CFG = {
   fixedDt: 1 / 120,
   throwsPerGame: 5,                             // 五投勝負
 };
-const VERSION = 'v1.3';  // 画面の隅に小さく出す。更新内容はブログ記事の冒頭に
+const VERSION = 'v1.4';  // 画面の隅に小さく出す。更新内容はブログ記事の冒頭に
 // スワイプの強さ→投げの強さ。真ん中寄りに縮めて、ちょうど良い強さを出しやすくする（2026-11-14）
 const POWER = { center: 0.6, gain: 0.75 };
 
@@ -76,25 +76,25 @@ const MEI_EN = {
   nowaki:       'The pillow is toppled — a gale',
 };
 // 銘ごとのコツと出現率（参考値）。物理計算で試した結果から（2026-11-14、判定・物理の改訂後）
-//   r : 狙い・強さ・払い方をばらばらにした 10万投での割合（POWER で強さの効きを真ん中寄りにした後）
+//   r : 狙い・強さ・払い方をばらばらにした割合（v1.4 の物理で約4.4万投）
 //   rk: その銘のコツの範囲で投げた場合の割合（強さ×狙いの格子 約2万投から）
 // 強さの目安（scoresNote3 と同じ）：半分弱＝画面の高さの1/4を約0.5秒／半分ほど＝1/4を約0.4秒／やや強め＝1/3を約0.3秒
 const MEI_TIP = {
-  yumeukihashi: { r: '0.006%', rk: '0.2%', ja: 'まっすぐ、やや強めで蝶の上半分を狙う（狙いが高いほど、ほんの少し弱く）。蝶が立ったまま、扇が床に触れず枕と蝶の頭に架かれば成る。幻に近い', en: 'Straight and a bit firm, aimed at the upper half of the butterfly (a touch softer the higher you aim). The butterfly must stay standing while the fan rests on the pillow and its head, off the floor — nearly a phantom' },
-  kiritsubo:    { r: '0.04%', rk: '1.3%', ja: 'まっすぐ、半分ほどの力で蝶の上の方を。蝶を弾き出し、扇だけが床に触れず枕の上に残れば成る', en: 'Straight at about half strength, aimed high. Knock the butterfly off and leave the fan on the pillow, off the floor' },
+  yumeukihashi: { r: '0.05%', rk: '1%', ja: '円を描く払いで強めに（輪を描きながら画面の半分ほどを約0.5秒）。扇が床に触れず枕と蝶に架かり、蝶が一瞬でも立っていれば成る', en: 'A firm circling swipe (loop as you go, about half the screen in ~0.5 s). The fan must rest on the pillow and the butterfly, off the floor, and the butterfly must have stood at least for a moment' },
+  kiritsubo:    { r: '0.06%', rk: '1.3%', ja: 'まっすぐ、半分ほどの力で蝶の上の方を。蝶を弾き出し、扇だけが床に触れず枕の上に残れば成る', en: 'Straight at about half strength, aimed high. Knock the butterfly off and leave the fan on the pillow, off the floor' },
   mio:          { r: '0.4%', rk: '6%', ja: '桐壺と同じ投げ方で、蝶が倒れれば澪標。弧を描いてやや強めでも出やすい', en: 'Thrown like Kiritsubo — if the butterfly falls, it is Miotsukushi. A firm arcing swipe also works' },
   ukifune:      { r: '0.02%', rk: '0.3%', ja: '弧を描く払いで、半分ほどの力。蝶が床に触れず扇の上に立てば成る。とても珍しい', en: 'An arcing swipe at about half strength. The butterfly must stand on the fan, off the floor — very rare' },
-  akashi:       { r: '3.5%', rk: '9%', ja: 'まっすぐ、やや強めで蝶の下半分を。蝶が床に立てば成る', en: 'Straight and a bit firm, at the lower half of the butterfly — it must land standing' },
-  kobai:        { r: '0.35%', rk: '5%', ja: 'まっすぐ、半分弱の力で。扇が枕の上に立ち、蝶が立ったまま残れば成る', en: 'Straight, a little under half strength. The fan climbs onto the pillow while the butterfly stays standing' },
-  hananoen:     { r: '0.09%', rk: '0.5%', ja: '弧を描く払いで、やや強めに。蝶が床に着かず枕の縁に引っ掛かれば成る', en: 'An arcing swipe, a bit firm. The butterfly must catch on the pillow’s edge without touching the floor' },
-  suma:         { r: '3.7%', rk: '5%', ja: 'まっすぐ、やや強めで。夢浮橋のあと一歩', en: 'Straight and a bit firm — one step short of Yume no Ukihashi' },
-  yugao:        { r: '0.5%', rk: '4%', ja: '弧を描く払いで、半分ほどの力', en: 'An arcing swipe at about half strength' },
+  akashi:       { r: '3.4%', rk: '9%', ja: 'まっすぐ、やや強めで蝶の下半分を。蝶が床に立てば成る', en: 'Straight and a bit firm, at the lower half of the butterfly — it must land standing' },
+  kobai:        { r: '0.34%', rk: '5%', ja: 'まっすぐ、半分弱の力で。扇が枕の上に立ち、蝶が立ったまま残れば成る', en: 'Straight, a little under half strength. The fan climbs onto the pillow while the butterfly stays standing' },
+  hananoen:     { r: '0.07%', rk: '0.5%', ja: '弧を描く払いで、やや強めに。蝶が床に着かず枕の縁に引っ掛かれば成る', en: 'An arcing swipe, a bit firm. The butterfly must catch on the pillow’s edge without touching the floor' },
+  suma:         { r: '3.9%', rk: '5%', ja: 'まっすぐ、やや強めで。夢浮橋のあと一歩', en: 'Straight and a bit firm — one step short of Yume no Ukihashi' },
+  yugao:        { r: '0.4%', rk: '4%', ja: '弧を描く払いで、半分ほどの力', en: 'An arcing swipe at about half strength' },
   matsukaze:    { r: '1.3%', rk: '2%', ja: '半分ほどの力で蝶の上の方に当てると、蝶が枕の上に倒れて残る', en: 'Half strength at the top of the butterfly can leave it lying on the pillow' },
   hanachirusato:{ r: '20%', ja: '蝶は落とせている。強さを少し変えると上位の銘へ', en: 'You hit the butterfly — adjust your strength a little for higher forms' },
   sekiya:       { r: '16%', ja: '弱め（画面の1/5をゆっくり約0.8秒）だと、蝶は残り扇が枕に触れる', en: 'A soft throw (a fifth of the screen, slowly, ~0.8 s) leaves the butterfly and touches the pillow' },
   tenarai:      { r: '25%', ja: '強すぎると、扇は蝶を越えて飛び去る', en: 'Too strong and the fan sails over everything' },
   kotsuri:      { r: '27%', ja: '弱すぎると、枕を打つだけで終わる', en: 'Too soft and the fan just taps the pillow' },
-  nowaki:       { r: '1.5%', ja: 'とても強い払い、とくに弧・円・ジグザグで枕を倒しやすい', en: 'Very hard swipes — especially arcs, circles and zigzags — topple the pillow' },
+  nowaki:       { r: '1.6%', ja: 'とても強い払い、とくに弧・円・ジグザグで枕を倒しやすい', en: 'Very hard swipes — especially arcs, circles and zigzags — topple the pillow' },
 };
 function meiTipHtml(id) {
   const t = MEI_TIP[id];
@@ -796,6 +796,7 @@ let throwIndex = 0, totalScore = 0;
 const throwResults = [];
 let timeScale = CFG.baseTimeScale, timeScaleTarget = CFG.baseTimeScale;
 let impacted = false, judgeStarted = false;
+let bridgeUpSeen = false; const seenUp = { a: false, c: false };
 // 固定刻みの物理（stepPhysics）の状態
 let physAcc = 0, settleT = 0, interpOK = false, simMode = false, simSettled = false;
 const physBodies = [makuraBody, choBody, fanBody];
@@ -812,7 +813,20 @@ const aimWorld = new THREE.Vector3();
 const swipe = { active: false, pts: [], t0: 0 };
 
 /* ---------- 配置リセット ---------- */
+// 前の一投の名残（接触の記録・眠り）を消す。cannon-es は「新しく触れた」ときだけ collide を出すので、
+// 前の一投で扇が枕に触れたまま終わると、次の一投の最初の当たりが記録されず、飛び方まで変わっていた
+function clearPhysicsHistory() {
+  world.collisionMatrix.reset(); world.collisionMatrixPrevious.reset();
+  for (const k of [world.bodyOverlapKeeper, world.shapeOverlapKeeper]) { k.current.length = 0; k.previous.length = 0; }
+  world.contacts.length = 0;
+  world.time = 0; world.stepnumber = 0;   // 眠りの判定は時刻の差で行うので、時刻の大きさによる丸めの違いも消す
+  for (const b of physBodies) {
+    b.sleepState = CANNON.Body.AWAKE; b.timeLastSleepy = 0; b.wakeUpAfterNarrowphase = false;
+    b.force.setZero(); b.torque.setZero();
+  }
+}
 function resetBodies() {
+  clearPhysicsHistory();
   makuraBody.position.set(0, MAKURA.h / 2 + 0.001, 0);
   makuraBody.quaternion.set(0, 0, 0, 1);
   makuraBody.velocity.setZero(); makuraBody.angularVelocity.setZero();
@@ -830,11 +844,13 @@ function resetBodies() {
   contacts.fanCho = false; contacts.fanMakura = false;
   contacts.firstHit = null; contacts.makuraImpact = 0;
   impacted = false; judgeStarted = false;
-  physAcc = 0; settleT = 0; interpOK = false;
+  physAcc = 0; settleT = 0; interpOK = false; bridgeUpSeen = false; seenUp.a = seenUp.c = false;
   bellCount = 0; flightT = 0; toppleFired = false;
   spinReleased = true; pendingSpin.pitch = 0; pendingSpin.roll = 0;
   timeScale = timeScaleTarget = CFG.baseTimeScale;
   // 蝶を枕の上に完全に落ち着かせてから開始（投擲直後に勝手に落ちるのを防ぐ）
+  // 向きを戻したら慣性も計算し直す（cannon-es は動かした後に更新するので、1歩目に前の一投の向きの値が使われていた）
+  for (const b of physBodies) { b.updateInertiaWorld(true); b.aabbNeedsUpdate = true; }
   for (let i = 0; i < 40; i++) world.step(CFG.fixedDt);
   choBody.velocity.setZero(); choBody.angularVelocity.setZero();
   makuraBody.velocity.setZero(); makuraBody.angularVelocity.setZero();
@@ -913,6 +929,7 @@ function launchFan(power, azimuth, form = 'straight', g = {}) {
   if (!simMode) { setGuide(null); hide(reticleEl); snd.whoosh(); }
   fanBody.type = CANNON.Body.DYNAMIC;
   fanBody.updateMassProperties();
+  fanBody.updateInertiaWorld(true);
   fanBody.wakeUp();
   interpOK = false;
   // 発射方向：手元 → 狙い点（スワイプ左右で補正）
@@ -970,8 +987,25 @@ function touchNow() {
 }
 const JUDGE = { choUp: 0.72 };  // 蝶が「立っている」とみなす傾きの限度（上向き成分。0.72 ≒ 44°まで）
 let lastInput = null;
+// 夢浮橋の「蝶が一瞬でも立った」を見張る（宣言は resetBodies より前）
+//   a: 扇が床に触れず、枕と立った蝶に架かった瞬間があった
+//   c: 枕から落ちた蝶が、一瞬でも床に立った
+function watchBridge() {
+  let fm = false, fc = false, ff = false, cf = false;
+  for (const c of world.contacts) {
+    const a = c.bi, b = c.bj;
+    if ((a === choBody && b === floorBody) || (b === choBody && a === floorBody)) cf = true;
+    if (a !== fanBody && b !== fanBody) continue;
+    const o = a === fanBody ? b : a;
+    if (o === makuraBody) fm = true; else if (o === choBody) fc = true; else if (o === floorBody) ff = true;
+  }
+  const up = upY(choBody) > JUDGE.choUp;
+  if (up && fm && fc && !ff) seenUp.a = true;
+  if (up && cf) seenUp.c = true;
+  bridgeUpSeen = seenUp.a || seenUp.c;
+}
 // 物理・判定を変えたら上げる。番付の記録はこの版が同じものだけ再生で確かめる
-const PHYS_VER = 'p3';
+const PHYS_VER = 'p5';
 function simThrow(inp, frameDt = 1 / 60) {
   const keep = state;
   simMode = true;
@@ -1000,7 +1034,7 @@ function judge() {
   const fanOnMakura = !makuraDown && t.fm && !t.ff && fn.y > mkTop - 0.06;
   // 扇が床に触れず、枕と蝶だけに支えられている＝橋
   const bridge = !makuraDown && t.fm && t.fc && !t.ff;
-  // 夢浮橋は、立ったままの蝶と枕の間に扇が架かる形（蝶が倒れていれば橋でも須磨）
+  // 夢浮橋＝最後に橋の形で止まり、蝶が今も立っているか、途中で一瞬でも立った（v1.4）
   // 蝶が床に触れず、扇の上に載っている
   const choOnFan = t.fc && !t.cf && !t.cm && ch.y > fn.y;
   // 蝶が床に触れず、枕の縁に引っ掛かっている
@@ -1016,7 +1050,7 @@ function judge() {
       else id = 'tenarai';
     } else id = 'matsukaze';
   } else {
-    if (bridge && choUp) id = 'yumeukihashi';
+    if (bridge && (choUp || bridgeUpSeen)) id = 'yumeukihashi';
     else if (fanOnMakura) id = choUp ? 'kiritsubo' : 'mio';
     else if (choHanging) id = 'hananoen';
     else if (choOnFan) id = choUp ? 'ukifune' : 'yugao';
@@ -1449,13 +1483,12 @@ function verifyEntries(list) {
   const step = () => {
     if (i >= list.length || $('modal-rank').classList.contains('hidden') || state !== 'title') { if (state === 'title') resetBodies(); return; }
     const e = list[i++];
-    if (e.ver !== PHYS_VER) e.ck.textContent = ja ? '旧版の記録' : 'older version';
-    else {
-      let ok = false;
-      try { ok = e.throws.every((t, k) => simThrow(t) === e.ids[k]); } catch (err) { ok = false; }
-      e.ck.textContent = ok ? (ja ? '✓ 再生で確認' : '✓ verified') : (ja ? '⚠ 再生と不一致' : '⚠ mismatch');
-      e.ck.classList.add(ok ? 'ok' : 'ng');
-    }
+    // 版が違っても今の物理で計算し直し、同じ銘なら確認済み。違えば、同じ版なら改ざんの疑い、旧版なら判定が変わっただけ
+    let ok = false;
+    try { ok = e.throws.every((t, k) => simThrow(t) === e.ids[k]); } catch (err) { ok = false; }
+    if (ok) { e.ck.textContent = ja ? '✓ 再生で確認' : '✓ verified'; e.ck.classList.add('ok'); }
+    else if (e.ver !== PHYS_VER) e.ck.textContent = ja ? '旧版の記録' : 'older version';
+    else { e.ck.textContent = ja ? '⚠ 再生と不一致' : '⚠ mismatch'; e.ck.classList.add('ng'); }
     setTimeout(step, 30);
   };
   step();
@@ -1770,6 +1803,7 @@ if (DEBUG) {
     return r.id;
   };
   window.dbgReplay = (throws, name = 'test') => startReplay({ name, throws });
+  window.dbgSeen = () => ({ ...seenUp });
   window.dbgInputs = () => throwResults.map(r => r.input);
   window.dbgVerify = (throws) => throws.map(t => simThrow(t));
   window.dbgShare = (i = -1) => { const r = throwResults.at(i); showMeiPose(r.id, { res: r, line: 'debug', total: false }); };
@@ -1840,6 +1874,7 @@ function stepPhysics(dt) {
     savePrev();
     if (state === 'flight' || state === 'judge') { flightT += h; applyAero(h); }
     world.step(h);
+    if (state === 'flight' && impacted) watchBridge();
     if (state === 'flight' || state === 'judge' || state === 'card') calmSettling(h);
     if (state === 'flight') checkSettle(h);
     if (simSettled) break;
