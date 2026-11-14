@@ -255,6 +255,9 @@ scene.add(rim);
 const fill = new THREE.DirectionalLight(0xffe0c0, 0.85);
 fill.position.set(0.3, 1.2, 2.4);
 scene.add(fill);
+// 札を出して座敷が回る間だけ、見ている側から照らす灯り（裏側に回っても形が影に沈まないように）
+const viewLight = new THREE.DirectionalLight(0xfff0dc, 0);
+scene.add(viewLight); scene.add(viewLight.target);
 
 /* ---------- 舞台 ---------- */
 function makeCanvasTexture(w, h, draw) {
@@ -762,12 +765,30 @@ const camState = {
   toPos: new THREE.Vector3(), toLook: new THREE.Vector3(), toUp: new THREE.Vector3(),
   t: 1, dur: 1,
 };
+// 銘の札を出している間は、上半分に札、下半分に座敷を置き、枕を中心にゆっくり回って形を見せる
+const orbit = { on: false, init: false, c: new THREE.Vector3(), ang: 0, ang0: 0, r: 0.7, h: 0.4, t: 0, offset: false };
+function startOrbit() {
+  // 枕・蝶（と近くにある扇）が収まるように、中心と距離を広がりから決める
+  const pts = [makuraBody.position, choBody.position];
+  const fn = fanBody.position;
+  if (Math.hypot(fn.x - makuraBody.position.x, fn.z - makuraBody.position.z) < 0.8) pts.push(fn);
+  const cx = pts.reduce((a, q) => a + q.x, 0) / pts.length, cz = pts.reduce((a, q) => a + q.z, 0) / pts.length;
+  const spread = Math.max(...pts.map(q => Math.hypot(q.x - cx, q.z - cz)));
+  orbit.c.set(cx, 0.12, cz);
+  // 少し高い所から見下ろす（枕の真後ろに落ちた蝶も見えるように）
+  orbit.rT = THREE.MathUtils.clamp(0.72 + spread * 1.4, 0.72, 1.5);
+  orbit.hT = 0.62 + spread * 0.5;
+  orbit.on = true; orbit.init = false;
+}
+function stopOrbit() { orbit.on = false; }
 function camGoto(pos, look, dur = 0.9, up = [0, 1, 0]) {
+  orbit.init = false;
   camState.fromPos.copy(camState.pos); camState.fromLook.copy(camState.look); camState.fromUp.copy(camState.up);
   camState.toPos.set(...pos); camState.toLook.set(...look); camState.toUp.set(...up);
   camState.t = 0; camState.dur = dur;
 }
 const easeInOut = (x) => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+const _vlUp = new THREE.Vector3(0, 0.6, 0);
 function updateCamera(dt) {
   if (camState.t < 1) {
     camState.t = Math.min(1, camState.t + dt / camState.dur);
@@ -785,6 +806,29 @@ function updateCamera(dt) {
     // 扇を目で追う
     camState.look.lerp(new THREE.Vector3().copy(fanBody.position), Math.min(1, dt * 6));
   }
+  const orbiting = state === 'card' && orbit.on;
+  if (orbiting && camState.t >= 1) {
+    if (!orbit.init) {   // 今のカメラ位置から滑らかに回り始める
+      const dx = camState.pos.x - orbit.c.x, dz = camState.pos.z - orbit.c.z;
+      orbit.ang0 = Math.atan2(dx, dz); orbit.r = Math.hypot(dx, dz); orbit.h = camState.pos.y; orbit.t = 0; orbit.init = true;
+    }
+    orbit.t += dt;
+    const k = Math.min(1, dt * 2);
+    orbit.r += (orbit.rT - orbit.r) * k; orbit.h += (orbit.hT - orbit.h) * k;
+    // 正面寄りで左右へ揺れる（真後ろは灯りの陰で暗く、座敷の外も見えるため回り切らない）
+    orbit.ang = orbit.ang0 - 0.95 * Math.sin(orbit.t * 0.75);
+    camState.pos.set(orbit.c.x + Math.sin(orbit.ang) * orbit.r, orbit.h, orbit.c.z + Math.cos(orbit.ang) * orbit.r);
+    camState.look.lerp(orbit.c, k);
+  }
+  // 見ている側からの灯りを、回っている間だけ点ける
+  viewLight.intensity += ((orbiting ? 1.1 : 0) - viewLight.intensity) * Math.min(1, dt * 3);
+  if (viewLight.intensity > 0.01) { viewLight.position.copy(camState.pos).add(_vlUp); viewLight.target.position.copy(orbit.c); }
+  // 札が上半分を占めるので、座敷の中心を画面の下寄り（約3/4の高さ）に描く
+  if (orbiting !== orbit.offset) {
+    orbit.offset = orbiting;
+    if (!orbiting) { camera.clearViewOffset(); }
+  }
+  if (orbiting) camera.setViewOffset(innerWidth, innerHeight, 0, -innerHeight * 0.24, innerWidth, innerHeight);
   camera.up.copy(camState.up);
   camera.position.copy(camState.pos);
   camera.lookAt(camState.look);
@@ -1106,7 +1150,9 @@ function showMeiCard(res) {
   p.textContent = ptsLabel(res.pts);
   p.className = res.pts > 0 ? 'plus' : (res.pts === 0 ? 'zero' : 'minus');
   $('btn-card-share').classList.toggle('hidden', res.pts < SHARE_MIN_PTS);
+  $('mei-card').classList.add('top');
   show($('mei-card'));
+  startOrbit();
   updateHUD();
   cardTimer = setTimeout(nextThrow, (DEBUG && window.dbgHoldCard) ? 60000 : (res.pts >= SHARE_MIN_PTS ? 6000 : 3000));
 }
@@ -1114,6 +1160,7 @@ function nextThrow() {
   if (cardTimer) { clearTimeout(cardTimer); cardTimer = null; }
   if (state !== 'card') return;      // 中断後に残ったタイマーでは進めない
   hide($('mei-card')); hide($('btn-card-share'));
+  $('mei-card').classList.remove('top'); stopOrbit();
   throwIndex++;
   if (throwIndex >= CFG.throwsPerGame) showResult();
   else { updateHUD(); startAim(); }
@@ -1209,6 +1256,7 @@ function showMeiPose(id, share = null) {
   const p = $('mei-points');
   p.textContent = ptsLabel(m.pts);
   p.className = m.pts > 0 ? 'plus' : (m.pts === 0 ? 'zero' : 'minus');
+  $('mei-card').classList.remove('top');
   $('mei-card').classList.add('pose');
   $('mei-card').dataset.hint = lang === 'ja' ? 'タップで銘定表へ戻る' : 'Tap to return';
   show($('mei-card'));
@@ -1268,6 +1316,7 @@ function endMeiPose() {
   const s = poseSaved; poseSaved = null;
   shareCtx = null; hide($('share-view'));
   hide($('mei-card')); $('mei-card').classList.remove('pose');
+  if (s.state === 'card') $('mei-card').classList.add('top');
   s.bodies.forEach(({ b, p, q }) => { b.position.copy(p); b.quaternion.copy(q); b.velocity.setZero(); b.angularVelocity.setZero(); });
   interpOK = false;
   state = s.state;
@@ -1612,7 +1661,7 @@ $('btn-menu-quit').addEventListener('click', () => {
   if (cardTimer) { clearTimeout(cardTimer); cardTimer = null; }
   throwResults.length = 0; totalScore = 0;  // 途中の記録（再生分を含む）を番付に混ぜない
   hide($('modal-menu')); hide($('hud')); hide(reticleEl); hide($('btn-aim-ok'));
-  hide($('mei-card')); setGuide(null); clearTrail();
+  hide($('mei-card')); $('mei-card').classList.remove('top'); stopOrbit(); setGuide(null); clearTrail();
   resetBodies(); state = 'title'; show($('screen-title'));
 });
 document.querySelectorAll('.btn-close').forEach(b =>

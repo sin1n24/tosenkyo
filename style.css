@@ -693,3 +693,21 @@ html.en #mei-points { padding-top: 18px; }
 
 /* 版（表座敷の右下に小さく。押すと更新内容のブログへ） */
 #app-ver { position: absolute; right: 12px; bottom: 10px; font-size: 10px; letter-spacing: .08em; color: var(--washi-dim); opacity: .6; text-decoration: none; }
+
+/* 投げた後の札：上半分に横組みで出し、下半分で座敷が回って形を見せる */
+#mei-card.top {
+  align-items: flex-start;
+  padding-top: calc(max(12px, env(safe-area-inset-top)) + 46px);
+  background: linear-gradient(to bottom, rgba(10, 6, 8, .72), rgba(10, 6, 8, .25) 42%, transparent 55%);
+}
+#mei-card.top .tanzaku {
+  writing-mode: horizontal-tb;
+  height: auto;
+  width: min(330px, 88vw);
+  padding: 16px 18px 14px;
+  text-align: center;
+}
+#mei-card.top .tanzaku > div { margin: 0 0 4px; }
+#mei-card.top #mei-name { font-size: clamp(34px, 10vw, 44px); }
+#mei-card.top #mei-desc { padding-top: 6px; }
+#mei-card.top #mei-points { padding-top: 8px; }
