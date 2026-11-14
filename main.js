@@ -72,6 +72,35 @@ const MEI_EN = {
   kotsuri:      'The fan strikes only the pillow',
   nowaki:       'The pillow is toppled — a gale',
 };
+// 銘ごとのコツと出現率（参考値）。物理計算で試した結果から（2026-11-14、判定・物理の改訂後）
+//   r : 狙い・強さ・払い方をばらばらにした 10万投での割合
+//   rk: その銘のコツの範囲で投げた場合の割合（強さ×狙いの格子 約2万投から）
+// 強さの目安（scoresNote3 と同じ）：半分弱＝画面の高さの1/4を約0.4秒／半分ほど＝1/4を約0.3秒／やや強め＝1/3を約0.3秒
+const MEI_TIP = {
+  yumeukihashi: { r: '0.4%', rk: '2.5%', ja: 'まっすぐ、やや強めで蝶の下半分を狙う。扇が床に触れず、枕と蝶だけに支えられて架かれば成る', en: 'Straight and a bit firm, aimed at the lower half of the butterfly. The fan must rest on the pillow and the butterfly alone, off the floor' },
+  kiritsubo:    { r: '0.03%', rk: '1.3%', ja: 'まっすぐ、半分ほどの力で蝶の上の方を。蝶を弾き出し、扇だけが床に触れず枕の上に残れば成る', en: 'Straight at about half strength, aimed high. Knock the butterfly off and leave the fan on the pillow, off the floor' },
+  mio:          { r: '0.3%', rk: '6%', ja: '桐壺と同じ投げ方で、蝶が倒れれば澪標。弧を描いてやや強めでも出やすい', en: 'Thrown like Kiritsubo — if the butterfly falls, it is Miotsukushi. A firm arcing swipe also works' },
+  ukifune:      { r: '0.02%', rk: '0.3%', ja: '弧を描く払いで、半分ほどの力。蝶が床に触れず扇の上に立てば成る。とても珍しい', en: 'An arcing swipe at about half strength. The butterfly must stand on the fan, off the floor — very rare' },
+  akashi:       { r: '3%', rk: '9%', ja: 'まっすぐ、やや強めで蝶の下半分を。蝶が床に立てば成る', en: 'Straight and a bit firm, at the lower half of the butterfly — it must land standing' },
+  kobai:        { r: '0.3%', rk: '5%', ja: 'まっすぐ、半分弱の力で。扇が枕の上に立ち、蝶が立ったまま残れば成る', en: 'Straight, a little under half strength. The fan climbs onto the pillow while the butterfly stays standing' },
+  hananoen:     { r: '0.08%', rk: '0.5%', ja: '弧を描く払いで、やや強めに。蝶が床に着かず枕の縁に引っ掛かれば成る', en: 'An arcing swipe, a bit firm. The butterfly must catch on the pillow’s edge without touching the floor' },
+  suma:         { r: '3%', rk: '5%', ja: 'まっすぐ、やや強めで。夢浮橋のあと一歩', en: 'Straight and a bit firm — one step short of Yume no Ukihashi' },
+  yugao:        { r: '0.4%', rk: '4%', ja: '弧を描く払いで、半分ほどの力', en: 'An arcing swipe at about half strength' },
+  matsukaze:    { r: '1%', rk: '2%', ja: '半分ほどの力で蝶の上の方に当てると、蝶が枕の上に倒れて残る', en: 'Half strength at the top of the butterfly can leave it lying on the pillow' },
+  hanachirusato:{ r: '16%', ja: '蝶は落とせている。強さを少し変えると上位の銘へ', en: 'You hit the butterfly — adjust your strength a little for higher forms' },
+  sekiya:       { r: '14%', ja: '弱め（画面の1/4を約0.5秒）だと、蝶は残り扇が枕に触れる', en: 'A soft throw (a quarter of the screen in ~0.5 s) leaves the butterfly and touches the pillow' },
+  tenarai:      { r: '37%', ja: '強すぎると、扇は蝶を越えて飛び去る', en: 'Too strong and the fan sails over everything' },
+  kotsuri:      { r: '23%', ja: '弱すぎると、枕を打つだけで終わる', en: 'Too soft and the fan just taps the pillow' },
+  nowaki:       { r: '2.5%', ja: 'とても強い払い、とくに弧・円・ジグザグで枕を倒しやすい', en: 'Very hard swipes — especially arcs, circles and zigzags — topple the pillow' },
+};
+function meiTipHtml(id) {
+  const t = MEI_TIP[id];
+  const ja = lang === 'ja';
+  const rate = t.r == null
+    ? (ja ? '約12万投で未出現（0.003%未満）' : 'Not seen in ~120k throws (<0.003%)')
+    : (ja ? `出現率 約${t.r}` : `Rate ≈${t.r}`) + (t.rk ? (ja ? `（コツ通りなら約${t.rk}）` : ` (≈${t.rk} with the tip)`) : '');
+  return `<span class="tip">${ja ? 'コツ：' : 'Tip: '}${ja ? t.ja : t.en}</span><span class="rate">${rate}</span>`;
+}
 const L = {
   ja: {
     guideAim: '狙う所に触れる ― 指を引いて微調整',
@@ -82,6 +111,7 @@ const L = {
     btnResume: '続ける', btnClose: '閉じる', soundOn: '音：鳴', soundOff: '音：消',
     resultLabel: '結びの一巻', bestLabel: 'これまでの最高 ',
     scoresNote1: '扇・蝶・枕のかたちに、源氏物語五十四帖の名を借りて点を定めます。',
+    scoresNote3: '【出現率について】物理計算で10万投を試した参考値です（狙い・強さ・払い方をばらばらにした場合）。「コツ通り」は、その銘のコツの範囲で投げた場合の割合です。強さの目安は、半分弱＝画面の高さの1/4を約0.4秒、半分ほど＝1/4を約0.3秒、やや強め＝1/3を約0.3秒で払う程度。結果は端末の速さによらず同じです。',
     scoresNote2: '【流派について】銘とその点は流派ごとに異なります。本作の銘定は、都御流の源氏物語形式を基に、御扇流・其扇流などの定めを参考にした独自のものです。',
     tips: [
       '<b>ふわりと投じる。</b>力任せは扇の乱れのもと。枕を倒せば「野分」、大きく点を失います。',
@@ -102,6 +132,7 @@ const L = {
     btnResume: 'Resume', btnClose: 'Close', soundOn: 'Sound: On', soundOff: 'Sound: Off',
     resultLabel: 'Final Tally', bestLabel: 'Best: ',
     scoresNote1: 'Each final arrangement of fan, butterfly and pillow is a “mei” — a form named after a chapter of the Tale of Genji, each worth its own points.',
+    scoresNote3: 'About the rates: reference values from 100,000 simulated throws with random aim, strength and swipe. “With the tip” is the rate when throwing as the tip says. Strength guide: a little under half = a quarter of the screen height in ~0.4 s; about half = a quarter in ~0.3 s; a bit firm = a third in ~0.3 s. Results are the same on any device.',
     scoresNote2: 'About schools: forms and points vary by school. This game uses its own scoring based on the Miyako-Goryu Genji style, with reference to the Gosen-ryu and Kisen-ryu schools.',
     tips: [
       '<b>Toss gently.</b> Throwing hard scatters the fan — topple the pillow and “Nowaki” costs you 30 points.',
@@ -576,6 +607,7 @@ const AERO = {
   kLift: 0.025, kFloat: 0.75,       // kFloat: 飛翔中の見かけ重力軽減率
   kFlutter: 0.0005, kAlign: 0.0008, // kAlign: 面を上に保つ復元（滑空姿勢）
   vMax: 5, wMax: 10,                // 発散防止の上限
+  kSpent: 7,                        // 当たった後に扇の勢いが尽きる速さ（大きいほど枕の近くに留まる）
 };
 const _v = new CANNON.Vec3(), _n = new CANNON.Vec3(), _tmp = new CANNON.Vec3();
 const UPV = new CANNON.Vec3(0, 1, 0);
@@ -655,7 +687,7 @@ function calmSettling(dt) {
   if (!impacted && fanBody.position.z > -0.15) return;
   if (impacted) {
     // 当たった後の扇は力尽きる：全体を減衰し、手前への跳ね返りは殺す
-    fanBody.velocity.scale(Math.max(0, 1 - 1.6 * dt), fanBody.velocity);
+    fanBody.velocity.scale(Math.max(0, 1 - AERO.kSpent * dt), fanBody.velocity);
     if (fanBody.velocity.z > 0.4) fanBody.velocity.z *= 0.4;
   }
   for (const b of [fanBody, choBody]) {
@@ -757,7 +789,12 @@ let state = 'title';
 let throwIndex = 0, totalScore = 0;
 const throwResults = [];
 let timeScale = CFG.baseTimeScale, timeScaleTarget = CFG.baseTimeScale;
-let impacted = false, settleFrames = 0, judgeStarted = false;
+let impacted = false, judgeStarted = false;
+// 固定刻みの物理（stepPhysics）の状態
+let physAcc = 0, settleT = 0, interpOK = false, simMode = false, simSettled = false;
+const physBodies = [makuraBody, choBody, fanBody];
+const prevPose = physBodies.map(() => ({ p: new CANNON.Vec3(), q: new CANNON.Quaternion() }));
+function savePrev() { physBodies.forEach((b, i) => { prevPose[i].p.copy(b.position); prevPose[i].q.copy(b.quaternion); }); }
 const clock = new THREE.Clock();
 
 /* 狙い */
@@ -786,7 +823,8 @@ function resetBodies() {
   fanBody.updateMassProperties();
   contacts.fanCho = false; contacts.fanMakura = false;
   contacts.firstHit = null; contacts.makuraImpact = 0;
-  impacted = false; settleFrames = 0; judgeStarted = false;
+  impacted = false; judgeStarted = false;
+  physAcc = 0; settleT = 0; interpOK = false;
   bellCount = 0; flightT = 0; toppleFired = false;
   spinReleased = true; pendingSpin.pitch = 0; pendingSpin.roll = 0;
   timeScale = timeScaleTarget = CFG.baseTimeScale;
@@ -853,6 +891,7 @@ function launchFan(power, azimuth, form = 'straight', g = {}) {
   fanBody.type = CANNON.Body.DYNAMIC;
   fanBody.updateMassProperties();
   fanBody.wakeUp();
+  interpOK = false;
   // 発射方向：手元 → 狙い点（スワイプ左右で補正）
   const target = new THREE.Vector3(
     THREE.MathUtils.clamp(aimWorld.x + azimuth * 0.3, -0.45, 0.45),
@@ -896,46 +935,56 @@ function onFirstImpact() {
 const _q = new CANNON.Vec3();
 function upY(body) { body.quaternion.vmult(new CANNON.Vec3(0, 1, 0), _q); return _q.y; }
 function horizDist(a, b) { const dx = a.x - b.x, dz = a.z - b.z; return Math.hypot(dx, dz); }
+// いま実際に触れ合っている組を調べる（眠っている物体は接触が計算されないので、起こして一歩だけ進める）
+function touchNow() {
+  for (const b of physBodies) b.wakeUp();
+  world.step(CFG.fixedDt);
+  const has = (a, b) => world.contacts.some(c => (c.bi === a && c.bj === b) || (c.bi === b && c.bj === a));
+  return {
+    fm: has(fanBody, makuraBody), fc: has(fanBody, choBody), cm: has(choBody, makuraBody),
+    ff: has(fanBody, floorBody), cf: has(choBody, floorBody),
+  };
+}
+// 判定：止まった時点で「実際に触れ合っているか」で形を決める（距離だけで決めない）
 function judge() {
+  const t = touchNow();
   const mk = makuraBody.position, ch = choBody.position, fn = fanBody.position;
   const mkTop = mk.y + MAKURA.h / 2;
   const makuraDown = upY(makuraBody) < 0.55;
   const choUp = upY(choBody) > 0.72;
-  const choOnMakura = !makuraDown && horizDist(ch, mk) < 0.105 && ch.y > mkTop - 0.03;
-  const fanTilt = upY(fanBody);
-  const fanNearMakura = horizDist(fn, mk) < 0.20;
-  // 「枕に乗る」＝ほぼ水平のまま枕の上に掛かって留まる（実物の澪標も多くは扇が枕から張り出す）
-  const fanOnMakura = !makuraDown && contacts.fanMakura && fanTilt > 0.8 &&
-    fn.y > MAKURA.h - 0.05 && horizDist(fn, mk) < 0.17;
-  const fanLeaning = !fanOnMakura && contacts.fanMakura && fanNearMakura &&
-    fanTilt > 0.25 && fanTilt <= 0.8 && fn.y > 0.02;
-  const choOnFan = ch.y > fn.y + 0.002 && horizDist(ch, fn) < 0.11 && ch.y < fn.y + 0.09;
-  const fanTouchCho = horizDist(fn, ch) < 0.13 && Math.abs(fn.y - ch.y) < 0.08;
-  const choHanging = !choOnMakura && horizDist(ch, mk) < 0.115 && ch.y > 0.058 && ch.y < mkTop + 0.02;
-  const bridge = !fanOnMakura && fanNearMakura && contacts.fanMakura && fanTouchCho && fn.y > 0.045;
+  // 蝶が枕の上に載っている
+  const choOnMakura = !makuraDown && t.cm && ch.y > mkTop - 0.03;
+  // 扇が床に触れず、枕の上に掛かっている
+  const fanOnMakura = !makuraDown && t.fm && !t.ff && fn.y > mkTop - 0.06;
+  // 扇が床に触れず、枕と蝶だけに支えられている＝橋
+  const bridge = !makuraDown && t.fm && t.fc && !t.ff;
+  // 蝶が床に触れず、扇の上に載っている
+  const choOnFan = t.fc && !t.cf && !t.cm && ch.y > fn.y;
+  // 蝶が床に触れず、枕の縁に引っ掛かっている
+  const choHanging = !choOnMakura && t.cm && !t.cf;
 
   let id;
   if (makuraDown) id = 'nowaki';
   else if (choOnMakura) {
     if (choUp) {
       if (fanOnMakura) id = 'kobai';
-      else if (fanLeaning) id = 'sekiya';
+      else if (t.fm) id = 'sekiya';
       else if (contacts.fanMakura) id = 'kotsuri';
       else id = 'tenarai';
     } else id = 'matsukaze';
   } else {
-    if (bridge && choUp) id = 'yumeukihashi';
+    if (bridge) id = 'yumeukihashi';
     else if (fanOnMakura) id = choUp ? 'kiritsubo' : 'mio';
-    else if (choOnFan) id = choUp ? 'ukifune' : 'yugao';
     else if (choHanging) id = 'hananoen';
+    else if (choOnFan) id = choUp ? 'ukifune' : 'yugao';
     else if (choUp) id = 'akashi';
-    else if (fanLeaning) id = 'suma';
+    else if (t.fm) id = 'suma';
     else id = 'hanachirusato';
   }
   const mei = MEI[id];
   const pts = mei.pts;
   if (DEBUG) console.log('JUDGE', JSON.stringify({
-    id, pts, choUp, choOnMakura, fanOnMakura, fanLeaning, choOnFan,
+    id, pts, choUp, choOnMakura, fanOnMakura, bridge, choOnFan, touch: t,
     fan: [fn.x, fn.y, fn.z].map(v => +v.toFixed(3)),
     cho: [ch.x, ch.y, ch.z].map(v => +v.toFixed(3)),
     contacts: { ...contacts },
@@ -1005,15 +1054,21 @@ const MEI_POSE = {
   mio:          { cho: { p: [0.11, 0.02, 0.12], r: [-H, 0.5, 0] }, fan: FAN_ON_MAKURA },
   ukifune:      { cho: { p: [0.03, 0.0615, 0.19], r: [0, 0.3, 0] }, fan: { p: [0.02, 0.012, 0.20], r: [0, 0.4, 0] } },
   akashi:       { cho: { p: [0.12, 0.0375, 0.06], r: [0, -0.3, 0] }, fan: { p: [-0.12, 0.012, 0.22], r: [0, 0.8, 0] } },
-  kobai:        { cho: CHO_ON_MAKURA, fan: { p: [0, 0.29, 0.10], r: [0.25, 0.1, 0] } },
-  // 台座は枕の上に残り、蝶は縁から頭を垂れて引っ掛かる
-  hananoen:     { cho: { p: [0.054, 0.262, 0.0], r: [0, 0, -2.3] }, fan: { p: [-0.10, 0.012, 0.24], r: [0, -0.6, 0] } },
+  // 紅梅・花宴は試算で実際に決まった配置（枕・蝶・扇の位置と向き）を、見やすい向きへ回して使う
+  // 紅梅：蝶は枕の上に立ったまま、扇が枕の上に立って蝶にもたれる
+  kobai:        { yaw: Math.PI, snap: [
+    [[0.0002, 0.135, 0.0004], [0, 0.0002, 0, 1]], [[0.0013, 0.3075, 0.0008], [0, 0.0116, 0, 0.9999]],
+    [[0.0185, 0.345, 0.0326], [-0.7065, 0.0299, 0.0299, 0.7064]]] },
+  // 花宴：蝶は床に着かず、枕の縁に引っ掛かる
+  hananoen:     { yaw: Math.PI, snap: [
+    [[-0.0005, 0.135, 0.0013], [0, 0.0015, 0, 1]], [[-0.0624, 0.1894, -0.055], [0.0078, -0.1024, 0.9942, -0.032]],
+    [[-0.1339, 0.1325, -0.0329], [-0.3378, -0.5235, 0.4241, 0.6573]]] },
   suma:         { cho: { p: [0.13, 0.02, -0.04], r: [-H, 0.3, 0] }, fan: FAN_LEAN },
   yugao:        { cho: { p: [0.04, 0.044, 0.17], r: [-H, 0.6, 0] }, fan: { p: [0.05, 0.012, 0.18], r: [0, 0.2, 0] } },
   matsukaze:    { cho: { p: [0, 0.29, 0], r: [-H, 0.4, 0] }, fan: { p: [-0.12, 0.012, 0.24], r: [0, -0.5, 0] } },
   hanachirusato:{ cho: { p: [0.12, 0.02, 0.02], r: [-H, 0.7, 0] }, fan: { p: [-0.19, 0.012, 0.06], r: [0, -1.0, 0] } },
   sekiya:       { cho: CHO_ON_MAKURA, fan: FAN_LEAN },
-  tenarai:      { cho: CHO_ON_MAKURA, fan: { p: [-0.20, 0.012, -0.04], r: [0, -0.5, 0] } },
+  tenarai:      { cho: CHO_ON_MAKURA, fan: { p: [-0.27, 0.012, 0.08], r: [0, -0.5, 0] } },
   kotsuri:      { cho: CHO_ON_MAKURA, fan: { p: [0.03, 0.012, 0.17], r: [0, 0.25, 0] } },
   nowaki:       { makura: { p: [0, 0.045, -0.10], r: [-H, 0, 0] },
                   cho: { p: [0.12, 0.02, -0.26], r: [-H, 0.9, 0] }, fan: { p: [-0.05, 0.012, 0.16], r: [0, -0.3, 0] } },
@@ -1027,9 +1082,22 @@ function placeBody(body, pose) {
   poseQuat.setFromEuler(poseEuler.set(pose.r[0], pose.r[1], pose.r[2], 'YXZ'));
   body.quaternion.set(poseQuat.x, poseQuat.y, poseQuat.z, poseQuat.w);
   body.velocity.setZero(); body.angularVelocity.setZero();
+  interpOK = false;
+}
+// 試算の配置を枕の縦軸まわりに yaw だけ回して置く（全体を同じだけ回すので、物理的な形は変わらない）
+function placeSnap(snap, yaw) {
+  const c = Math.cos(yaw), sn = Math.sin(yaw), hy = Math.sin(yaw / 2), hw = Math.cos(yaw / 2);
+  physBodies.forEach((b, k) => {
+    const [x, y, z] = snap[k][0], [qx, qy, qz, qw] = snap[k][1];
+    b.position.set(c * x + sn * z, y, -sn * x + c * z);
+    b.quaternion.set(hw * qx + hy * qz, hw * qy + hy * qw, hw * qz - hy * qx, hw * qw - hy * qy);
+    b.velocity.setZero(); b.angularVelocity.setZero();
+  });
+  interpOK = false;
 }
 function applyMeiPose(id) {
   const P = MEI_POSE[id];
+  if (P.snap) { placeSnap(P.snap, P.yaw || 0); return; }
   placeBody(makuraBody, P.makura || MAKURA_STAND);
   placeBody(choBody, P.cho);
   placeBody(fanBody, P.fan);
@@ -1121,6 +1189,7 @@ function endMeiPose() {
   shareCtx = null; hide($('share-view'));
   hide($('mei-card')); $('mei-card').classList.remove('pose');
   s.bodies.forEach(({ b, p, q }) => { b.position.copy(p); b.quaternion.copy(q); b.velocity.setZero(); b.angularVelocity.setZero(); });
+  interpOK = false;
   state = s.state;
   camGoto(s.cam.pos.toArray(), s.cam.look.toArray(), 0.6, s.cam.up.toArray());
   s.shown.forEach(k => show($(k)));
@@ -1437,7 +1506,7 @@ $('btn-sv-post').addEventListener('click', () => {
 });
 
 /* ---------- 銘定表 ---------- */
-const MEI_IMG_VER = 2; // mei/*.jpg を撮り直したら上げる
+const MEI_IMG_VER = 3; // mei/*.jpg を撮り直したら上げる
 function buildMeiTable() {
   const tbl = $('mei-table');
   tbl.innerHTML = '';
@@ -1445,7 +1514,7 @@ function buildMeiTable() {
     const m = MEI[id];
     const tr = document.createElement('tr');
     tr.innerHTML = `<td class="t"><img src="mei/${id}.jpg?v=${MEI_IMG_VER}" alt="" loading="lazy" decoding="async"></td>` +
-      `<td class="n">${m.name}<small>${lang === 'ja' ? m.yomi : m.romaji}</small><span class="d">${meiDesc(id)}</span></td>` +
+      `<td class="n">${m.name}<small>${lang === 'ja' ? m.yomi : m.romaji}</small><span class="d">${meiDesc(id)}</span>${meiTipHtml(id)}</td>` +
       `<td class="p${m.pts < 0 ? ' minus' : ''}">${ptsLabel(m.pts)}</td>`;
     tr.addEventListener('click', () => {
       if (state === 'flight' || state === 'judge' || state === 'card') return; // 投擲中は開かない
@@ -1477,7 +1546,8 @@ function applyLang() {
   document.querySelector('#modal-menu h2').textContent = T.menuTitle;
   const notes = document.querySelectorAll('#modal-scores .modal-note');
   notes[0].textContent = T.scoresNote1;
-  notes[1].textContent = T.scoresNote2;
+  notes[1].textContent = T.scoresNote3;
+  notes[2].textContent = T.scoresNote2;
   $('tips-list').innerHTML = T.tips.map(s => `<li>${s}</li>`).join('');
   document.querySelector('.result-label').textContent = T.resultLabel;
   $('sv-hint').textContent = lang === 'ja' ? 'この形を伝えよう' : 'Share this shape';
@@ -1527,6 +1597,38 @@ if (DEBUG) {
     if (state === 'aim') startSwipe();
     setTimeout(() => launchFan(power, 0), 1000);
   };
+  // 検証用：描画せずに一投を最後まで計算して銘を返す（実際の物理・判定と同じ関数を使う）
+  window.dbgSim = (power, ax, ay, azimuth = 0, form = 'straight', g = {}, frameDt = 1 / 60) => {
+    state = 'aim'; resetBodies();
+    aim.x = ax; aim.y = ay; aimWorld.set(ax, ay, 0);
+    fanBody.position.set(CFG.handPos.x, CFG.handPos.y, CFG.handPos.z);
+    fanBody.quaternion.setFromEuler(0.15, 0, 0);
+    launchFan(power, azimuth, form, g);
+    simMode = true; simSettled = false;
+    for (let frames = 0; !simSettled && frames < 4000; frames++) stepPhysics(frameDt);
+    simMode = false;
+    const r = judge();
+    state = 'title';
+    window.lastPoseSnap = physBodies.map(b => ({ p: [b.position.x, b.position.y, b.position.z].map(v => +v.toFixed(4)), q: [b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w].map(v => +v.toFixed(4)) }));
+    return r.id;
+  };
+  // 判定設計用：一投の終わりの様子（接触・姿勢・位置）
+  window.dbgSimDesc = (...args) => {
+    const id = window.dbgSim(...args);
+    const t = touchNow();
+    const mk = makuraBody.position, ch = choBody.position, fn = fanBody.position;
+    return { id, ...t, choUp: +upY(choBody).toFixed(2), fanUp: +upY(fanBody).toFixed(2), mkUp: +upY(makuraBody).toFixed(2),
+      fy: +fn.y.toFixed(3), cy: +ch.y.toFixed(3), dFM: +horizDist(fn, mk).toFixed(3), dCM: +horizDist(ch, mk).toFixed(3), dFC: +horizDist(fn, ch).toFixed(3), hitM: contacts.fanMakura, hitC: contacts.fanCho };
+  };
+  // 銘の見本の配置が、その銘として判定されるか（見本と判定の食い違い検出）
+  window.dbgJudgePose = (id, settle = 24) => {
+    const keep = state; state = 'pose'; applyMeiPose(id); contacts.fanMakura = id !== 'tenarai';
+    const fanType = fanBody.type; fanBody.type = CANNON.Body.DYNAMIC; fanBody.updateMassProperties();
+    for (const b of physBodies) b.wakeUp();
+    for (let i = 0; i < settle; i++) world.step(CFG.fixedDt);   // 手置きの数mmの隙間を物理で詰める
+    const r = judge(); fanBody.type = fanType; fanBody.updateMassProperties(); state = keep;
+    return r.id;
+  };
   window.dbgShare = (i = -1) => { const r = throwResults.at(i); showMeiPose(r.id, { res: r, line: 'debug', total: false }); };
   // 告知画像用：見本の配置で「伝える画面」を出す（line は下段の文言）
   window.dbgShareMei = (id, line = '') => {
@@ -1557,13 +1659,17 @@ if (DEBUG) {
 }
 
 /* ---------- メインループ ---------- */
+const _ip = new CANNON.Vec3(), _iq = new CANNON.Quaternion();
 function syncMeshes() {
-  makuraMesh.position.copy(makuraBody.position);
-  makuraMesh.quaternion.copy(makuraBody.quaternion);
-  choMesh.position.copy(choBody.position);
-  choMesh.quaternion.copy(choBody.quaternion);
-  fanMesh.position.copy(fanBody.position);
-  fanMesh.quaternion.copy(fanBody.quaternion);
+  const interp = interpOK && (state === 'flight' || state === 'judge' || state === 'card');
+  const a = physAcc / CFG.fixedDt;
+  [makuraMesh, choMesh, fanMesh].forEach((m, i) => {
+    const b = physBodies[i];
+    if (interp) {
+      prevPose[i].p.lerp(b.position, a, _ip); prevPose[i].q.slerp(b.quaternion, a, _iq);
+      m.position.copy(_ip); m.quaternion.copy(_iq);
+    } else { m.position.copy(b.position); m.quaternion.copy(b.quaternion); }
+  });
 }
 function updateReticle() {
   swayT += 0.016;
@@ -1574,6 +1680,8 @@ function updateReticle() {
   reticleEl.style.left = ((v.x + 1) / 2 * innerWidth) + 'px';
   reticleEl.style.top = ((-v.y + 1) / 2 * innerHeight) + 'px';
 }
+// 物理は常に同じ刻み（CFG.fixedDt）で進める。端末の描画速度が違っても結果が変わらないように、
+// 余りの時間は次のフレームへ持ち越し、描画は直前の2状態の間を補間する
 function stepPhysics(dt) {
   // 接近スローモーション
   if (state === 'flight' && !impacted) {
@@ -1581,32 +1689,38 @@ function stepPhysics(dt) {
     timeScaleTarget = d < 0.5 ? CFG.slowMoScale : CFG.baseTimeScale;
   }
   timeScale += (timeScaleTarget - timeScale) * Math.min(1, dt * 6);
-  const scaled = dt * timeScale;
-  let acc = scaled;
-  while (acc > 0) {
-    const h = Math.min(CFG.fixedDt, acc);
+  physAcc = Math.min(physAcc + dt * timeScale, 0.1);
+  const h = CFG.fixedDt;
+  if (!interpOK) { savePrev(); interpOK = true; }
+  while (physAcc >= h) {
+    physAcc -= h;
+    savePrev();
     if (state === 'flight' || state === 'judge') { flightT += h; applyAero(h); }
     world.step(h);
     if (state === 'flight' || state === 'judge' || state === 'card') calmSettling(h);
-    acc -= h;
+    if (state === 'flight') checkSettle(h);
+    if (simSettled) break;
   }
 }
-function checkSettle() {
-  if (state !== 'flight' || flightT < 0.7) return;
+// 静まったら判定（判定までの待ちは物理の時間で数える）
+function checkSettle(h) {
+  if (flightT < 0.7) return;
   const fs = fanBody.velocity.length() + fanBody.angularVelocity.length() * 0.1;
   const cs = choBody.velocity.length();
   const ms = makuraBody.velocity.length();
   const flewPast = fanBody.position.z < -0.9 || Math.abs(fanBody.position.x) > 1.3;
-  if ((fs < 0.09 && cs < 0.06 && ms < 0.06) || flewPast) settleFrames++;
-  else settleFrames = 0;
-  if (settleFrames > 42 || flightT > 7.5) finishThrow();
+  if ((fs < 0.09 && cs < 0.06 && ms < 0.06) || flewPast) settleT += h;
+  else settleT = 0;
+  if (settleT > 0.6 || flightT > 7.5) {
+    if (simMode) { simSettled = true; state = 'simdone'; }
+    else finishThrow();
+  }
 }
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(0.05, clock.getDelta());
   const t = clock.elapsedTime;
   if (state === 'flight' || state === 'judge' || state === 'card') stepPhysics(dt);
-  checkSettle();
   syncMeshes();
   if (state === 'aim') updateReticle();
   updateParticles(dt);
