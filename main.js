@@ -1621,7 +1621,7 @@ if (DEBUG) {
       fy: +fn.y.toFixed(3), cy: +ch.y.toFixed(3), dFM: +horizDist(fn, mk).toFixed(3), dCM: +horizDist(ch, mk).toFixed(3), dFC: +horizDist(fn, ch).toFixed(3), hitM: contacts.fanMakura, hitC: contacts.fanCho };
   };
   // 銘の見本の配置が、その銘として判定されるか（見本と判定の食い違い検出）
-  window.dbgJudgePose = (id, settle = 24) => {
+  window.dbgJudgePose = (id, settle = 30) => {
     const keep = state; state = 'pose'; applyMeiPose(id); contacts.fanMakura = id !== 'tenarai';
     const fanType = fanBody.type; fanBody.type = CANNON.Body.DYNAMIC; fanBody.updateMassProperties();
     for (const b of physBodies) b.wakeUp();
