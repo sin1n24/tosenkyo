@@ -28,7 +28,7 @@ const CFG = {
   fixedDt: 1 / 120,
   throwsPerGame: 5,                             // 五投勝負
 };
-const VERSION = 'v1.4';  // 画面の隅に小さく出す。更新内容はブログ記事の冒頭に
+const VERSION = 'v1.5';  // 画面の隅に小さく出す。更新内容はブログ記事の冒頭に
 // スワイプの強さ→投げの強さ。真ん中寄りに縮めて、ちょうど良い強さを出しやすくする（2026-11-14）
 const POWER = { center: 0.6, gain: 0.75 };
 
@@ -1017,7 +1017,7 @@ function simThrow(inp, frameDt = 1 / 60) {
   simSettled = false;
   for (let frames = 0; !simSettled && frames < 4000; frames++) stepPhysics(frameDt);
   const r = judge();
-  simMode = false;
+  simMode = false; simSettled = false;
   state = keep;
   return r.id;
 }
@@ -1081,6 +1081,7 @@ function finishThrow() {
   camGoto([0.40, 0.34, 0.66], [0, 0.16, 0], 1.1);
   // 演出
   setTimeout(() => {
+    if (state !== 'judge') return;   // 判定の演出を待つ間に中断された
     snd.score(res.pts);
     if (res.pts >= 30) {
       $('flash').classList.add('on');
@@ -1111,6 +1112,7 @@ function showMeiCard(res) {
 }
 function nextThrow() {
   if (cardTimer) { clearTimeout(cardTimer); cardTimer = null; }
+  if (state !== 'card') return;      // 中断後に残ったタイマーでは進めない
   hide($('mei-card')); hide($('btn-card-share'));
   throwIndex++;
   if (throwIndex >= CFG.throwsPerGame) showResult();
@@ -1303,7 +1305,8 @@ function showResult() {
   const isNew = !isReplay && totalScore > best;
   if (isNew) localStorage.setItem('tosenkyo_best', String(totalScore));
   const bestEl = $('result-best');
-  bestEl.textContent = L[lang].bestLabel + totalLabel(Math.max(best, totalScore));
+  bestEl.textContent = L[lang].bestLabel + totalLabel(isReplay ? best : Math.max(best, totalScore));
+  bestEl.classList.toggle('hidden', isReplay && best <= -9999);
   bestEl.classList.toggle('new', isNew);
   const list = $('result-list');
   list.innerHTML = '';
@@ -1445,10 +1448,39 @@ function clearTrail() { trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.
 const RANK_URL = 'https://script.google.com/macros/s/AKfycbyb2z2263yJYfZV-wN_god5r3DwVmuA_ZH_0CwOoQRVWGDyR0k9YBLSdVsZ2a5tTpnS0g/exec';   // GAS Webアプリの /exec（空なら番付を出さない）
 let replay = null;     // 再生中の記録 { name, throws, i }
 let rankSent = false, rankReady = false;
+// 端末の大まかな種類（OS／描画エンジン）。機種や詳しいブラウザ名は送らない
+const ENV = (() => {
+  const ua = navigator.userAgent || '';
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const os = ios ? 'iOS' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'other';
+  const eng = ios ? 'webkit' : /Firefox\//.test(ua) ? 'gecko' : /Chrome\/|Chromium\/|Edg\//.test(ua) ? 'blink' : /AppleWebKit/.test(ua) ? 'webkit' : 'other';
+  return os + '/' + eng;
+})();
+// 計算の指紋：決まった3投を計算し、止まった位置・向きを全桁で要約する。端末（JS エンジン）ごとの計算差がここに出る
+let physSigCache = null;
+function physSig() {
+  if (physSigCache) return physSigCache;
+  if (state !== 'title') return '';   // 遊んでいる最中は座敷を動かさない（表座敷にいるときだけ計算する）
+  const ref = [
+    { p: 0.62, x: 0.01, y: 0.30, a: 0, f: 'straight', g: {} },
+    { p: 0.74, x: -0.02, y: 0.33, a: 0.05, f: 'circle', g: { turnSum: 6 } },
+    { p: 0.50, x: 0.03, y: 0.37, a: -0.03, f: 'curve', g: { chord: 300, maxDev: 90 } },
+  ];
+  let h = 0x811c9dc5;
+  for (const t of ref) {
+    const id = simThrow(t);
+    let str = id;
+    for (const b of physBodies) str += ',' + [b.position.x, b.position.y, b.position.z, b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w].join(',');
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  }
+  if (state === 'title') resetBodies();
+  physSigCache = h.toString(16).padStart(8, '0');
+  return physSigCache;
+}
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (t) => String(t).replace(/[&<>"']/g, c => ESC[c]);
 // 受け皿が応答したときだけ番付を出す（GAS が使えない間はボタンも送信欄も出さない）
-if (RANK_URL) fetch(RANK_URL + '?n=1').then(x => x.json()).then(j => { if (j && j.ok) { rankReady = true; show($('btn-rank')); } }).catch(() => {});
+probeRank();
 $('btn-rank').addEventListener('click', () => { snd.tap(); openRank(); });
 async function openRank() {
   const ja = lang === 'ja';
@@ -1477,21 +1509,42 @@ async function openRank() {
   }
 }
 // 記録の入力で五投を計算し直し、銘が同じか確かめる（一件ずつ、画面を止めないように）
+let verifyGen = 0;
 function verifyEntries(list) {
   const ja = lang === 'ja';
+  const gen = ++verifyGen;
   let i = 0;
   const step = () => {
+    if (gen !== verifyGen) return;
     if (i >= list.length || $('modal-rank').classList.contains('hidden') || state !== 'title') { if (state === 'title') resetBodies(); return; }
     const e = list[i++];
     // 版が違っても今の物理で計算し直し、同じ銘なら確認済み。違えば、同じ版なら改ざんの疑い、旧版なら判定が変わっただけ
-    let ok = false;
-    try { ok = e.throws.every((t, k) => simThrow(t) === e.ids[k]); } catch (err) { ok = false; }
-    if (ok) { e.ck.textContent = ja ? '✓ 再生で確認' : '✓ verified'; e.ck.classList.add('ok'); }
-    else if (e.ver !== PHYS_VER) e.ck.textContent = ja ? '旧版の記録' : 'older version';
-    else { e.ck.textContent = ja ? '⚠ 再生と不一致' : '⚠ mismatch'; e.ck.classList.add('ng'); }
+    let ok = false, got = [];
+    try { got = e.throws.map(t => simThrow(t)); ok = got.every((id, k) => id === e.ids[k]); } catch (err) { ok = false; }
+    // 同じ版で合わないとき、記録した端末と計算の指紋が違えば端末差（改ざんとは限らない）
+    const devDiff = !ok && e.ver === PHYS_VER && e.sig && e.sig !== physSig();
+    let res;
+    if (ok) { res = 'ok'; e.ck.textContent = ja ? '✓ 再生で確認' : '✓ verified'; e.ck.classList.add('ok'); }
+    else if (e.ver !== PHYS_VER) { res = 'old'; e.ck.textContent = ja ? '旧版の記録' : 'older version'; }
+    else if (devDiff) { res = 'device'; e.ck.textContent = ja ? `端末の計算差（${e.env}）` : `device difference (${e.env})`; }
+    else { res = 'ng'; e.ck.textContent = ja ? '⚠ 再生と不一致' : '⚠ mismatch'; e.ck.classList.add('ng'); }
+    checks.push({ time: e.time, name: e.name, env: e.env || '', sig: e.sig || '', ver: e.ver, res, got: res === 'ok' ? [] : got });
     setTimeout(step, 30);
   };
+  const checks = [];
+  physSig();
   step();
+  // 全件見終えたら、照合の結果を受け皿に残す（端末どうしの計算差を後で調べるため。1日1回まで）
+  const done = () => {
+    if (gen !== verifyGen) return;
+    if (i < list.length) { if (!$('modal-rank').classList.contains('hidden') && state === 'title') setTimeout(done, 500); return; }
+    if (!checks.length) return;
+    const day = new Date().toISOString().slice(0, 10);
+    try { if (localStorage.getItem('tosenkyo_checked') === day) return; localStorage.setItem('tosenkyo_checked', day); } catch (err) { /* 保存できない環境 */ }
+    fetch(RANK_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'check', env: ENV, sig: physSig(), ver: PHYS_VER, checks: checks.slice(0, 20) }) }).catch(() => {});
+  };
+  setTimeout(done, 500);
 }
 function startReplay(e) {
   hide($('modal-rank'));
@@ -1499,9 +1552,17 @@ function startReplay(e) {
   replay = { name: e.name, throws: e.throws, i: 0 };
   startGame();
 }
+function probeRank() {
+  if (!RANK_URL || rankReady) return Promise.resolve(rankReady);
+  return fetch(RANK_URL + '?n=1').then(x => x.json()).then(j => {
+    if (j && j.ok) { rankReady = true; show($('btn-rank')); if (state === 'title') physSig(); }
+    return rankReady;
+  }).catch(() => false);
+}
 function setupRankSubmit(isReplay) {
   const box = $('rank-submit');
   rankSent = false;
+  if (!rankReady && !isReplay && RANK_URL) { probeRank().then(ok => { if (ok && state === 'result') setupRankSubmit(false); }); }
   if (!rankReady || isReplay || throwResults.length !== CFG.throwsPerGame || throwResults.some(r => !r.input)) { hide(box); return; }
   try { $('rank-name').value = localStorage.getItem('tosenkyo_name') || ''; } catch (err) { /* 保存できない環境 */ }
   $('rank-msg').textContent = '';
@@ -1518,7 +1579,8 @@ $('btn-rank-send').addEventListener('click', async () => {
   rankSent = true; $('btn-rank-send').disabled = true;
   $('rank-msg').textContent = ja ? '送っています…' : 'Sending…';
   try {
-    const body = { name, total: totalScore, ids: throwResults.map(r => r.id), throws: throwResults.map(r => r.input), ver: PHYS_VER };
+    const sig = physSigCache || '';
+    const body = { name, total: totalScore, ids: throwResults.map(r => r.id), throws: throwResults.map(r => r.input), ver: PHYS_VER, env: ENV, sig };
     const r = await fetch(RANK_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) }).then(x => x.json());
     if (!r.ok) throw new Error(r.error);
     $('rank-msg').textContent = ja ? `今月の番付 ${r.rank}位 に載りました（${r.count}件中）` : `You are #${r.rank} this month (of ${r.count})`;
@@ -1547,6 +1609,8 @@ $('btn-menu-sound').addEventListener('click', (e) => {
 });
 $('btn-menu-quit').addEventListener('click', () => {
   replay = null;
+  if (cardTimer) { clearTimeout(cardTimer); cardTimer = null; }
+  throwResults.length = 0; totalScore = 0;  // 途中の記録（再生分を含む）を番付に混ぜない
   hide($('modal-menu')); hide($('hud')); hide(reticleEl); hide($('btn-aim-ok'));
   hide($('mei-card')); setGuide(null); clearTrail();
   resetBodies(); state = 'title'; show($('screen-title'));
@@ -1691,7 +1755,7 @@ function buildMeiTable() {
       `<td class="n">${m.name}<small>${lang === 'ja' ? m.yomi : m.romaji}</small><span class="d">${meiDesc(id)}</span>${meiTipHtml(id)}</td>` +
       `<td class="p${m.pts < 0 ? ' minus' : ''}">${ptsLabel(m.pts)}</td>`;
     tr.addEventListener('click', () => {
-      if (state === 'flight' || state === 'judge' || state === 'card') return; // 投擲中は開かない
+      if (replay || state === 'flight' || state === 'judge' || state === 'card') return; // 投擲中・再生中は開かない
       snd.tap(); showMeiPose(id);
     });
     tbl.appendChild(tr);
@@ -1804,6 +1868,7 @@ if (DEBUG) {
   };
   window.dbgReplay = (throws, name = 'test') => startReplay({ name, throws });
   window.dbgSeen = () => ({ ...seenUp });
+  window.dbgEnv = () => ({ env: ENV, sig: physSig() });
   window.dbgInputs = () => throwResults.map(r => r.input);
   window.dbgVerify = (throws) => throws.map(t => simThrow(t));
   window.dbgShare = (i = -1) => { const r = throwResults.at(i); showMeiPose(r.id, { res: r, line: 'debug', total: false }); };
@@ -1877,7 +1942,7 @@ function stepPhysics(dt) {
     if (state === 'flight' && impacted) watchBridge();
     if (state === 'flight' || state === 'judge' || state === 'card') calmSettling(h);
     if (state === 'flight') checkSettle(h);
-    if (simSettled) break;
+    if (simMode && simSettled) break;
   }
 }
 // 静まったら判定（判定までの待ちは物理の時間で数える）
