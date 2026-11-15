@@ -1931,6 +1931,7 @@ if (DEBUG) {
   window.dbgAim = (x, y) => { aim.x = x; aim.y = y; };
   window.dbgPhase = () => ({ state, impacted, fan: fanBody.position.toArray(), cho: choBody.position.toArray(), makura: makuraBody.position.toArray() });
   window.dbgTouch = () => touchNow();
+  window.dbgProject = (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (-v.y + 1) / 2 * innerHeight]; };
   window.dbgCamVec = (o, k, v) => o[k].set(...v);
   window.dbgSeen = () => ({ ...seenUp });
   window.dbgEnv = () => ({ env: ENV, sig: physSig() });
@@ -2026,7 +2027,8 @@ function checkSettle(h) {
 }
 function animate() {
   requestAnimationFrame(animate);
-  const dt = Math.min(0.05, clock.getDelta());
+  // ?debug の紹介動画づくり用：dbgTimeScale でゲーム内の時間だけを遅くする（なめらかなスロー）
+  const dt = Math.min(0.05, clock.getDelta()) * ((DEBUG && window.dbgTimeScale) || 1);
   const t = clock.elapsedTime;
   if (state === 'flight' || state === 'judge' || state === 'card') stepPhysics(dt);
   syncMeshes();
