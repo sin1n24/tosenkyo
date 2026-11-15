@@ -689,6 +689,10 @@ html.en #mei-points { padding-top: 18px; }
 #rank-list .ck.ok { color: #9fc38f; }
 #rank-list .ck.ng { color: #d98b7a; }
 #rank-list button { grid-column: 3 / 4; padding: 4px 10px; font-size: 12px; }
+#rank-list li.more { display: block; padding: 0 0 4px 2.6em; border: 0; }
+#rank-list li.more button.btn-more { all: unset; cursor: pointer; font-size: 11px; color: var(--washi-dim); }
+#rank-list li.sub { opacity: .85; padding-left: 0; }
+#rank-list li.sub.hidden { display: none; }
 #rank-list .empty { display: block; text-align: center; color: var(--washi-dim); border: 0; }
 
 /* 版（表座敷の右下に小さく。押すと更新内容のブログへ） */

@@ -28,7 +28,7 @@ const CFG = {
   fixedDt: 1 / 120,
   throwsPerGame: 5,                             // 五投勝負
 };
-const VERSION = 'v1.5';  // 画面の隅に小さく出す。更新内容はブログ記事の冒頭に
+const VERSION = 'v1.6';  // 画面の隅に小さく出す。更新内容はブログ記事の冒頭に
 // スワイプの強さ→投げの強さ。真ん中寄りに縮めて、ちょうど良い強さを出しやすくする（2026-11-14）
 const POWER = { center: 0.6, gain: 0.75 };
 
@@ -76,11 +76,12 @@ const MEI_EN = {
   nowaki:       'The pillow is toppled — a gale',
 };
 // 銘ごとのコツと出現率（参考値）。物理計算で試した結果から（2026-11-14、判定・物理の改訂後）
+//   夢浮橋だけ v1.6（形が0.5秒保たれたら確定）で測り直し：旧判定と同じ1.3万投を比べ、ばらばら 0.04%→0.22%、コツの範囲は約3倍（旧 rk 1% → 3%）
 //   r : 狙い・強さ・払い方をばらばらにした割合（v1.4 の物理で約4.4万投）
 //   rk: その銘のコツの範囲で投げた場合の割合（強さ×狙いの格子 約2万投から）
 // 強さの目安（scoresNote3 と同じ）：半分弱＝画面の高さの1/4を約0.5秒／半分ほど＝1/4を約0.4秒／やや強め＝1/3を約0.3秒
 const MEI_TIP = {
-  yumeukihashi: { r: '0.05%', rk: '1%', ja: '円を描く払いで強めに（輪を描きながら画面の半分ほどを約0.5秒）。扇が床に触れず枕と蝶に架かり、蝶が一瞬でも立っていれば成る', en: 'A firm circling swipe (loop as you go, about half the screen in ~0.5 s). The fan must rest on the pillow and the butterfly, off the floor, and the butterfly must have stood at least for a moment' },
+  yumeukihashi: { r: '0.2%', rk: '3%', ja: '円を描く払いで強めに（輪を描きながら画面の半分ほどを約0.5秒）。扇が床に触れず枕と蝶に架かり、蝶が一瞬でも立っていて、その形が約0.5秒保たれれば成る（その瞬間で止まる）', en: 'A firm circling swipe (loop as you go, about half the screen in ~0.5 s). The fan must rest on the pillow and the butterfly, off the floor, the butterfly must have stood at least for a moment, and the shape must hold for about half a second (it freezes right then)' },
   kiritsubo:    { r: '0.06%', rk: '1.3%', ja: 'まっすぐ、半分ほどの力で蝶の上の方を。蝶を弾き出し、扇だけが床に触れず枕の上に残れば成る', en: 'Straight at about half strength, aimed high. Knock the butterfly off and leave the fan on the pillow, off the floor' },
   mio:          { r: '0.4%', rk: '6%', ja: '桐壺と同じ投げ方で、蝶が倒れれば澪標。弧を描いてやや強めでも出やすい', en: 'Thrown like Kiritsubo — if the butterfly falls, it is Miotsukushi. A firm arcing swipe also works' },
   ukifune:      { r: '0.02%', rk: '0.3%', ja: '弧を描く払いで、半分ほどの力。蝶が床に触れず扇の上に立てば成る。とても珍しい', en: 'An arcing swipe at about half strength. The butterfly must stand on the fan, off the floor — very rare' },
@@ -121,6 +122,7 @@ const L = {
       '<b>狙いは蝶の下端。</b>裾を掬うように当てると、蝶は宙に舞い、良い銘が生まれやすくなります。',
       '<b>枕の上端は禁物。</b>縁に扇が当たると「コツリ」。音は良くても点になりません。',
       '<b>払い方で飛び方が変わる。</b>まっすぐ払えば素直に水平を保ち、弧を描けば横に回り、円を描けば傾いて滑り、ジグザグなら縦に暴れます。',
+      '<b>ジグザグも試す。</b>上へ払いながら左右に二度以上振ると、扇が縦に回って飛びます。まだ使う人の少ない払い方で、思わぬ形が出ることも。',
       '<b>呼吸を読む。</b>狙いは息づかいでわずかに揺れます。止まる一瞬を見極めて構えましょう。',
       '<b>かたちは時の運。</b>同じ投げでも結びは一度きり。それもまた一興です。',
     ],
@@ -142,6 +144,7 @@ const L = {
       '<b>Aim for the butterfly’s base.</b> Scoop its lower edge and it dances into the air — better forms follow.',
       '<b>Avoid the pillow’s rim.</b> Clip it and that’s “Kotsuri” — a fine sound, but minus one point.',
       '<b>Your stroke shapes the flight.</b> A straight swipe glides flat and true; an arc adds sideways spin; a circle banks the fan; a zigzag makes it tumble.',
+      '<b>Try the zigzag.</b> Wiggle left and right at least twice as you swipe up and the fan flips end over end — few players use it, and it can land surprising forms.',
       '<b>Watch your breathing.</b> The reticle sways gently; catch the moment it settles before you commit.',
       '<b>The final form is fate.</b> No two throws end alike — that, too, is part of the game.',
     ],
@@ -850,6 +853,9 @@ const throwResults = [];
 let timeScale = CFG.baseTimeScale, timeScaleTarget = CFG.baseTimeScale;
 let impacted = false, judgeStarted = false;
 let bridgeUpSeen = false; const seenUp = { a: false, c: false };
+// 夢浮橋の凍結（v1.6）：橋の形（扇が床に触れず枕と蝶に架かる）が約0.5秒保たれたら、その瞬間で止めて夢浮橋とする
+const HOLD = { n: 60, minFm: 40, minFc: 40, fanV: 0.25, choV: 0.2 };
+let holdBuf = [], yumeFrozen = false;
 // 固定刻みの物理（stepPhysics）の状態
 let physAcc = 0, settleT = 0, interpOK = false, simMode = false, simSettled = false;
 const physBodies = [makuraBody, choBody, fanBody];
@@ -898,6 +904,7 @@ function resetBodies() {
   contacts.firstHit = null; contacts.makuraImpact = 0;
   impacted = false; judgeStarted = false;
   physAcc = 0; settleT = 0; interpOK = false; bridgeUpSeen = false; seenUp.a = seenUp.c = false;
+  holdBuf = []; yumeFrozen = false;
   bellCount = 0; flightT = 0; toppleFired = false;
   spinReleased = true; pendingSpin.pitch = 0; pendingSpin.roll = 0;
   timeScale = timeScaleTarget = CFG.baseTimeScale;
@@ -1053,12 +1060,32 @@ function watchBridge() {
     if (o === makuraBody) fm = true; else if (o === choBody) fc = true; else if (o === floorBody) ff = true;
   }
   const up = upY(choBody) > JUDGE.choUp;
+  if (DEBUG && window.dbgWatchFn) window.dbgWatchFn({ fm, fc, ff, cf, cm: world.contacts.some(c => (c.bi === choBody && c.bj === makuraBody) || (c.bj === choBody && c.bi === makuraBody)),
+    up: +upY(choBody).toFixed(2), mk: +upY(makuraBody).toFixed(2), cy: +choBody.position.y.toFixed(3), fv: +fanBody.velocity.length().toFixed(3), cv: +choBody.velocity.length().toFixed(3), seen: bridgeUpSeen });
   if (up && fm && fc && !ff) seenUp.a = true;
   if (up && cf) seenUp.c = true;
   bridgeUpSeen = seenUp.a || seenUp.c;
+  // 凍結の見張り：直近 HOLD.n 刻みのあいだ、扇は一度も床に触れず、枕は倒れず、蝶は枕の上にいない。
+  // 蝶は今立っているか、途中で一瞬でも立った（v1.4 の夢浮橋の決まりのまま）。
+  // 接触は刻みごとにちらつくので、扇と枕・扇と蝶の接触は「大半の刻み」で足りるとする
+  const choOff = choBody.position.y < MAKURA.h - 0.03;
+  const ok = !ff && choOff && (up || bridgeUpSeen) && upY(makuraBody) >= 0.55;
+  if (!ok) { holdBuf.length = 0; return; }
+  holdBuf.push((fm ? 1 : 0) | (fc ? 2 : 0));
+  if (holdBuf.length > HOLD.n) holdBuf.shift();
+  if (holdBuf.length < HOLD.n) return;
+  let nm = 0, nc = 0;
+  for (const v of holdBuf) { if (v & 1) nm++; if (v & 2) nc++; }
+  if (nm >= HOLD.minFm && nc >= HOLD.minFc && (holdBuf[HOLD.n - 1] === 3)
+      && fanBody.velocity.length() < HOLD.fanV && choBody.velocity.length() < HOLD.choV) freezeYume();
+}
+function freezeYume() {
+  if (DEBUG && window.dbgNoFreeze) return;   // 試算用：凍結せずに続きを見る
+  yumeFrozen = true;
+  for (const b of physBodies) { b.velocity.setZero(); b.angularVelocity.setZero(); }
 }
 // 物理・判定を変えたら上げる。番付の記録はこの版が同じものだけ再生で確かめる
-const PHYS_VER = 'p5';
+const PHYS_VER = 'p6';
 function simThrow(inp, frameDt = 1 / 60) {
   const keep = state;
   simMode = true;
@@ -1076,6 +1103,7 @@ function simThrow(inp, frameDt = 1 / 60) {
 }
 // 判定：止まった時点で「実際に触れ合っているか」で形を決める（距離だけで決めない）
 function judge() {
+  if (yumeFrozen) return { id: 'yumeukihashi', mei: MEI.yumeukihashi, pts: MEI.yumeukihashi.pts };
   const t = touchNow();
   const mk = makuraBody.position, ch = choBody.position, fn = fanBody.position;
   const mkTop = mk.y + MAKURA.h / 2;
@@ -1103,8 +1131,7 @@ function judge() {
       else id = 'tenarai';
     } else id = 'matsukaze';
   } else {
-    if (bridge && (choUp || bridgeUpSeen)) id = 'yumeukihashi';
-    else if (fanOnMakura) id = choUp ? 'kiritsubo' : 'mio';
+    if (fanOnMakura) id = choUp ? 'kiritsubo' : 'mio';
     else if (choHanging) id = 'hananoen';
     else if (choOnFan) id = choUp ? 'ukifune' : 'yugao';
     else if (choUp) id = 'akashi';
@@ -1548,22 +1575,41 @@ async function openRank() {
   const list = $('rank-list');
   list.innerHTML = `<li class="empty">${ja ? '読み込み中…' : 'Loading…'}</li>`;
   try {
-    const r = await fetch(RANK_URL + '?n=20').then(x => x.json());
+    const r = await fetch(RANK_URL + '?n=20&per=1').then(x => x.json());   // 1人につき最高の1件（他の記録は畳む）
     const [y, m] = r.month.split('-');
     $('rank-month').textContent = ja ? `${+y}年${+m}月` : r.month;
     if (!r.list.length) { list.innerHTML = `<li class="empty">${ja ? 'まだ記録がありません。最初の一人にどうぞ。' : 'No entries yet — be the first.'}</li>`; return; }
     list.innerHTML = '';
-    r.list.forEach((e, i) => {
+    const row = (e, no, sub) => {
       const best = e.ids.reduce((b, id) => (MEI[id].pts > MEI[b].pts ? id : b), e.ids[0]);
       const li = document.createElement('li');
-      li.innerHTML = `<span class="no">${i + 1}</span><span class="nm">${esc(e.name)}</span><span class="tt">${totalLabel(e.total)}</span>` +
+      if (sub) li.className = 'sub hidden';
+      li.innerHTML = `<span class="no">${no}</span><span class="nm">${sub ? '' : esc(e.name)}</span><span class="tt">${totalLabel(e.total)}</span>` +
         `<span class="mm">${ja ? '最高' : 'Best'}「${MEI[best].name}」 <span class="ck">…</span></span>` +
         `<button class="btn-sub">${ja ? '再生' : 'Replay'}</button>`;
       li.querySelector('button').addEventListener('click', () => { snd.tap(); startReplay(e); });
       e.ck = li.querySelector('.ck');
       list.appendChild(li);
+      return li;
+    };
+    const all = [];
+    r.list.forEach((e, i) => {
+      row(e, i + 1, false); all.push(e);
+      const others = e.others || [];
+      if (!others.length) return;
+      // その人の他の記録（上位3件まで）は畳んでおき、押すと開く
+      const tg = document.createElement('li'); tg.className = 'more';
+      const label = (open) => (ja ? `${open ? '▴' : '▾'} ${esc(e.name)} の他の記録 ${e.more}件` : `${open ? '▴' : '▾'} ${e.more} more by ${esc(e.name)}`)
+        + (e.more > others.length ? (ja ? `（上位${others.length}件を表示）` : ` (top ${others.length} shown)`) : '');
+      tg.innerHTML = `<button class="btn-more">${label(false)}</button>`;
+      list.appendChild(tg);
+      const subs = others.map(o => { all.push(o); return row(o, '', true); });
+      tg.querySelector('button').addEventListener('click', (ev) => {
+        snd.tap(); const open = subs[0].classList.contains('hidden');
+        subs.forEach(li => li.classList.toggle('hidden', !open)); ev.currentTarget.innerHTML = label(open);
+      });
     });
-    verifyEntries(r.list);
+    verifyEntries(all);
   } catch (err) {
     list.innerHTML = `<li class="empty">${ja ? '番付を読み込めませんでした。' : 'Could not load the ranking.'}</li>`;
   }
@@ -1614,7 +1660,7 @@ function startReplay(e) {
 }
 function probeRank() {
   if (!RANK_URL || rankReady) return Promise.resolve(rankReady);
-  return fetch(RANK_URL + '?n=1').then(x => x.json()).then(j => {
+  return fetch(RANK_URL + '?ping=1').then(x => x.json()).then(j => {   // 表を読まない軽い確認
     if (j && j.ok) { rankReady = true; show($('btn-rank')); if (state === 'title') physSig(); }
     return rankReady;
   }).catch(() => false);
@@ -1643,7 +1689,7 @@ $('btn-rank-send').addEventListener('click', async () => {
     const body = { name, total: totalScore, ids: throwResults.map(r => r.id), throws: throwResults.map(r => r.input), ver: PHYS_VER, env: ENV, sig };
     const r = await fetch(RANK_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) }).then(x => x.json());
     if (!r.ok) throw new Error(r.error);
-    $('rank-msg').textContent = ja ? `今月の番付 ${r.rank}位 に載りました（${r.count}件中）` : `You are #${r.rank} this month (of ${r.count})`;
+    $('rank-msg').textContent = ja ? `今月の番付 ${r.rank}位 に載りました（${r.count}人中）` : `You are #${r.rank} this month (of ${r.count} players)`;
   } catch (err) {
     rankSent = false; $('btn-rank-send').disabled = false;
     $('rank-msg').textContent = ja ? '送れませんでした。少し置いてもう一度どうぞ。' : 'Could not send — please try again.';
@@ -2003,6 +2049,11 @@ function stepPhysics(dt) {
   while (physAcc >= h) {
     physAcc -= h;
     savePrev();
+    if (yumeFrozen) {   // 夢浮橋の形で止めた：もう物理は進めない
+      if (state === 'flight') { if (simMode) { simSettled = true; state = 'simdone'; } else finishThrow(); }
+      if (simMode && simSettled) break;
+      continue;
+    }
     if (state === 'flight' || state === 'judge') { flightT += h; applyAero(h); }
     world.step(h);
     if (state === 'flight' && impacted) watchBridge();

@@ -1,6 +1,9 @@
 /**
  * フィジカル投扇興 月間番付（GAS Webアプリ＋このスプレッドシート）
  *  GET  ?month=YYYY-MM&n=20  → その月の上位（合計点の高い順、同点は早い者勝ち）
+ *  GET  ?month=YYYY-MM&n=20&per=1 → 1人（同じ名前）につき最高の1件。others にその人の他の記録（上位3件まで）と more（総数）
+ *  GET  ?ping=1              → 受け皿が生きているかだけ（表を読まない。ページを開くたびに呼ばれる）
+ * 一覧は1分間キャッシュする（投稿・削除で消す）。
  *  POST {name, total, ids[5], throws[5], ver} → 1件追加
  * 点数は送られた銘(ids)からサーバー側で計算し直す。各投げの入力(throws)は保存しておき、
  * 閲覧者のブラウザが同じ物理で計算し直して点数が本物か確かめる（ゲーム側の verifyEntry）。
@@ -43,11 +46,34 @@ function list_(month, n) {
   return out;
 }
 
+// 1人（同じ名前）につき最高の1件。その人の他の記録は others に（点の高い順に3件まで）
+function perName_(month, n) {
+  const all = list_(month, 100000), by = {}, out = [];
+  for (const r of all) {
+    const k = r.name;
+    if (!by[k]) { if (out.length >= n) continue; by[k] = r; r.others = []; r.more = 0; out.push(r); }
+    else { by[k].more++; if (by[k].others.length < 3) by[k].others.push(r); }
+  }
+  return out;
+}
+const cacheKey_ = (month, n, per) => ['L', month, n, per ? 1 : 0].join('_');
+function clearListCache_(month) {
+  const keys = [];
+  for (const n of [1, 20, 50]) for (const per of [0, 1]) keys.push(cacheKey_(month, n, per));
+  CacheService.getScriptCache().removeAll(keys);
+}
 function doGet(e) {
   const p = (e && e.parameter) || {};
+  if (p.ping) return json_({ ok: true });
   const month = /^\d{4}-\d{2}$/.test(p.month || '') ? p.month : monthKey_();
-  const n = Math.max(1, Math.min(50, Number(p.n) || 20));
-  return json_({ ok: true, month, list: list_(month, n) });
+  const n = [1, 20, 50].indexOf(Number(p.n)) >= 0 ? Number(p.n) : 20;   // キャッシュが散らないよう件数は決まった値だけ
+  const per = !!p.per;
+  const cache = CacheService.getScriptCache(), key = cacheKey_(month, n, per);
+  const hit = cache.get(key);
+  if (hit) return ContentService.createTextOutput(hit).setMimeType(ContentService.MimeType.JSON);
+  const body = JSON.stringify({ ok: true, month, per, list: per ? perName_(month, n) : list_(month, n) });
+  if (body.length < 95000) cache.put(key, body, 60);   // キャッシュは1件100KBまで
+  return ContentService.createTextOutput(body).setMimeType(ContentService.MimeType.JSON);
 }
 
 function cleanName_(s) {
@@ -58,10 +84,10 @@ function isNum_(v) { return typeof v === 'number' && isFinite(v); }
 // 端末の大まかな種類（例 iOS/webkit）と計算の指紋（16進8桁）。それ以外の形は捨てる
 const cleanEnv_ = (s) => (/^[A-Za-z]{2,10}\/[a-z]{3,8}$/.test(String(s || '')) ? String(s) : '');
 const cleanSig_ = (s) => (/^[0-9a-f]{8}$/.test(String(s || '')) ? String(s) : '');
-// 投稿しすぎの抑止（全体で1分に30件まで）
-function overLimit_() {
+// 投稿しすぎの抑止（全体で1分に30件まで）。照合の記録は別の枠（投稿の枠を食わないように）
+function overLimit_(kind) {
   const cache = CacheService.getScriptCache();
-  const key = 'n' + Math.floor(Date.now() / 60000);
+  const key = (kind || 'n') + Math.floor(Date.now() / 60000);
   const cnt = Number(cache.get(key) || 0);
   if (cnt >= 30) return true;
   cache.put(key, String(cnt + 1), 120);
@@ -69,7 +95,7 @@ function overLimit_() {
 }
 // 照合の結果を残す（閲覧者の端末で上位の記録を計算し直した結果。端末どうしの計算差を後で調べるため）
 function logChecks_(d) {
-  if (overLimit_()) return json_({ ok: false, error: 'busy' });
+  if (overLimit_('c')) return json_({ ok: false, error: 'busy' });
   const list = Array.isArray(d.checks) ? d.checks.slice(0, 20) : [];
   const env = cleanEnv_(d.env), sig = cleanSig_(d.sig), ver = String(d.ver || '').slice(0, 12);
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -115,17 +141,22 @@ function doPost(e) {
     const month = monthKey_(now);
     const thJson = JSON.stringify(th.map((t) => ({ p: t.p, x: t.x, y: t.y, a: t.a, f: t.f, g: t.g })));
     const dup = sheet_().getDataRange().getValues().slice(1).some((r) => monthKeyOf_(r[0]) === month && String(r[5]) === thJson);
-    if (dup) {
-      const list = list_(month, 1000);
-      return json_({ ok: true, dup: true, month, rank: list.filter((r) => r.total > total).length + 1, count: list.length });
-    }
+    if (dup) return json_({ ok: true, dup: true, month, ...rankOf_(month, name, total) });
     sheet_().appendRow([month, now, name, total, JSON.stringify(ids), thJson, ver, cleanEnv_(d.env), cleanSig_(d.sig)]);
-    const list = list_(month, 1000);
-    const rank = list.filter((r) => r.total > total).length + 1;
-    return json_({ ok: true, month, rank, count: list.length });
+    clearListCache_(month);
+    return json_({ ok: true, month, ...rankOf_(month, name, total) });
   } finally {
     lock.releaseLock();
   }
+}
+
+// 番付での順位（1人1件の並び）：自分より最高点が上の人の数＋1。count は載っている人数
+function rankOf_(month, name, total) {
+  const best = {};
+  for (const r of list_(month, 100000)) if (!(r.name in best)) best[r.name] = r.total;
+  const mine = Math.max(total, name in best ? best[name] : -Infinity);
+  const names = Object.keys(best);
+  return { rank: names.filter((k) => k !== name && best[k] > mine).length + 1, count: names.length, best: mine };
 }
 
 // 管理用：今月の指定した名前の記録を消す（ADMIN_KEY が空なら無効）
@@ -137,6 +168,7 @@ function deleteByName_(d) {
   for (let r = vals.length - 1; r >= 1; r--) {
     if (monthKeyOf_(vals[r][0]) === month && String(vals[r][2]) === String(d.name)) { sh.deleteRow(r + 1); n++; }
   }
+  clearListCache_(month);
   return json_({ ok: true, deleted: n });
 }
 
