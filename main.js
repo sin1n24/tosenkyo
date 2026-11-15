@@ -836,6 +836,8 @@ function updateCamera(dt) {
     if (!orbiting) { camera.clearViewOffset(); }
   }
   if (orbiting) camera.setViewOffset(innerWidth, innerHeight, 0, -(orbit.shiftY || 0), innerWidth, innerHeight);
+  // ?debug の紹介動画づくり用：撮影カメラを外から差し替える
+  if (DEBUG && window.dbgCamFn) window.dbgCamFn(camState, { fan: fanBody.position, cho: choBody.position, makura: makuraBody.position, state, dt });
   camera.up.copy(camState.up);
   camera.position.copy(camState.pos);
   camera.lookAt(camState.look);
@@ -1927,6 +1929,9 @@ if (DEBUG) {
   };
   window.dbgReplay = (throws, name = 'test') => startReplay({ name, throws });
   window.dbgAim = (x, y) => { aim.x = x; aim.y = y; };
+  window.dbgPhase = () => ({ state, impacted, fan: fanBody.position.toArray(), cho: choBody.position.toArray(), makura: makuraBody.position.toArray() });
+  window.dbgTouch = () => touchNow();
+  window.dbgCamVec = (o, k, v) => o[k].set(...v);
   window.dbgSeen = () => ({ ...seenUp });
   window.dbgEnv = () => ({ env: ENV, sig: physSig() });
   window.dbgInputs = () => throwResults.map(r => r.input);
