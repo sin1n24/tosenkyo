@@ -28,12 +28,15 @@ const CFG = {
   fixedDt: 1 / 120,
   throwsPerGame: 5,                             // 五投勝負
 };
-const VERSION = 'v1.6';  // 画面の隅に小さく出す。更新内容はブログ記事の冒頭に
+const VERSION = 'v1.7';  // 画面の隅に小さく出す。更新内容はブログ記事の冒頭に
 // スワイプの強さ→投げの強さ。真ん中寄りに縮めて、ちょうど良い強さを出しやすくする（2026-11-14）
 const POWER = { center: 0.6, gain: 0.75 };
 
 const MAKURA = { w: 0.09, h: 0.27, d: 0.09 };   // 底面正方形・背の高い台
 const CHO = { w: 0.09, h: 0.095 };
+// 蝶の重心の高さ（台座の底から 0.0375 の点＝座標の基準 からの持ち上げ）。
+// v1.7 で試算：+1cm で落ちた蝶が立って残る割合 13%→5.5%、+2cm で 3% になるが、蝶が立つ銘（夢浮橋・明石など）が大きく減るので 0 のまま
+const CHO_COM = (() => { const q = new URLSearchParams(location.search); return q.has('debug') && q.has('com') ? +q.get('com') : 0; })();  // ?debug&com= は検証用
 
 /* ---------- 銘定 ---------- */
 const MEI = {
@@ -82,20 +85,20 @@ const MEI_EN = {
 // 強さの目安（scoresNote3 と同じ）：半分弱＝画面の高さの1/4を約0.5秒／半分ほど＝1/4を約0.4秒／やや強め＝1/3を約0.3秒
 const MEI_TIP = {
   yumeukihashi: { r: '0.2%', rk: '3%', ja: '円を描く払いで強めに（輪を描きながら画面の半分ほどを約0.5秒）。扇が床に触れず枕と蝶に架かり、蝶が一瞬でも立っていて、その形が約0.5秒保たれれば成る（その瞬間で止まる）', en: 'A firm circling swipe (loop as you go, about half the screen in ~0.5 s). The fan must rest on the pillow and the butterfly, off the floor, the butterfly must have stood at least for a moment, and the shape must hold for about half a second (it freezes right then)' },
-  kiritsubo:    { r: '0.06%', rk: '1.3%', ja: 'まっすぐ、半分ほどの力で蝶の上の方を。蝶を弾き出し、扇だけが床に触れず枕の上に残れば成る', en: 'Straight at about half strength, aimed high. Knock the butterfly off and leave the fan on the pillow, off the floor' },
-  mio:          { r: '0.4%', rk: '6%', ja: '桐壺と同じ投げ方で、蝶が倒れれば澪標。弧を描いてやや強めでも出やすい', en: 'Thrown like Kiritsubo — if the butterfly falls, it is Miotsukushi. A firm arcing swipe also works' },
-  ukifune:      { r: '0.02%', rk: '0.3%', ja: '弧を描く払いで、半分ほどの力。蝶が床に触れず扇の上に立てば成る。とても珍しい', en: 'An arcing swipe at about half strength. The butterfly must stand on the fan, off the floor — very rare' },
-  akashi:       { r: '3.4%', rk: '9%', ja: 'まっすぐ、やや強めで蝶の下半分を。蝶が床に立てば成る', en: 'Straight and a bit firm, at the lower half of the butterfly — it must land standing' },
-  kobai:        { r: '0.34%', rk: '5%', ja: 'まっすぐ、半分弱の力で。扇が枕の上に立ち、蝶が立ったまま残れば成る', en: 'Straight, a little under half strength. The fan climbs onto the pillow while the butterfly stays standing' },
-  hananoen:     { r: '0.07%', rk: '0.5%', ja: '弧を描く払いで、やや強めに。蝶が床に着かず枕の縁に引っ掛かれば成る', en: 'An arcing swipe, a bit firm. The butterfly must catch on the pillow’s edge without touching the floor' },
-  suma:         { r: '3.9%', rk: '5%', ja: 'まっすぐ、やや強めで。夢浮橋のあと一歩', en: 'Straight and a bit firm — one step short of Yume no Ukihashi' },
-  yugao:        { r: '0.4%', rk: '4%', ja: '弧を描く払いで、半分ほどの力', en: 'An arcing swipe at about half strength' },
-  matsukaze:    { r: '1.3%', rk: '2%', ja: '半分ほどの力で蝶の上の方に当てると、蝶が枕の上に倒れて残る', en: 'Half strength at the top of the butterfly can leave it lying on the pillow' },
-  hanachirusato:{ r: '20%', ja: '蝶は落とせている。強さを少し変えると上位の銘へ', en: 'You hit the butterfly — adjust your strength a little for higher forms' },
-  sekiya:       { r: '16%', ja: '弱め（画面の1/5をゆっくり約0.8秒）だと、蝶は残り扇が枕に触れる', en: 'A soft throw (a fifth of the screen, slowly, ~0.8 s) leaves the butterfly and touches the pillow' },
-  tenarai:      { r: '25%', ja: '強すぎると、扇は蝶を越えて飛び去る', en: 'Too strong and the fan sails over everything' },
-  kotsuri:      { r: '27%', ja: '弱すぎると、枕を打つだけで終わる', en: 'Too soft and the fan just taps the pillow' },
-  nowaki:       { r: '1.6%', ja: 'とても強い払い、とくに弧・円・ジグザグで枕を倒しやすい', en: 'Very hard swipes — especially arcs, circles and zigzags — topple the pillow' },
+  kiritsubo:    { r: '0.04%', rk: '1.3%', ja: 'まっすぐ、半分ほどの力で蝶の上の方を。蝶を弾き出し、扇だけが床に触れず枕の上に残れば成る', en: 'Straight at about half strength, aimed high. Knock the butterfly off and leave the fan on the pillow, off the floor' },
+  mio:          { r: '0.3%', rk: '2%', ja: '桐壺と同じ投げ方で、蝶が倒れれば澪標。弧を描いてやや強めでも出やすい', en: 'Thrown like Kiritsubo — if the butterfly falls, it is Miotsukushi. A firm arcing swipe also works' },
+  ukifune:      { r: '0.3%', rk: '0.9%', ja: '弧を描く払いで、半分ほどの力。蝶が床に触れず扇の上に立てば成る。珍しい', en: 'An arcing swipe at about half strength. The butterfly must stand on the fan, off the floor — rare' },
+  akashi:       { r: '4.8%', rk: '11%', ja: 'まっすぐ、やや強めで蝶の下半分を。蝶が床に立てば成る', en: 'Straight and a bit firm, at the lower half of the butterfly — it must land standing' },
+  kobai:        { r: '1.2%', rk: '13%', ja: 'まっすぐ、半分弱の力で。扇が枕の上に立ち、蝶が立ったまま残れば成る', en: 'Straight, a little under half strength. The fan climbs onto the pillow while the butterfly stays standing' },
+  hananoen:     { r: '0.3%', rk: '1.2%', ja: '弧を描く払いで、やや強めに。蝶が床に着かず枕の縁に引っ掛かれば成る', en: 'An arcing swipe, a bit firm. The butterfly must catch on the pillow’s edge without touching the floor' },
+  suma:         { r: '5.2%', rk: '6%', ja: 'まっすぐ、やや強めで。夢浮橋のあと一歩', en: 'Straight and a bit firm — one step short of Yume no Ukihashi' },
+  yugao:        { r: '1.5%', rk: '8%', ja: '弧を描く払いで、半分ほどの力', en: 'An arcing swipe at about half strength' },
+  matsukaze:    { r: '1.4%', ja: '半分ほどの力で蝶の上の方に当てると、蝶が枕の上に倒れて残る', en: 'Half strength at the top of the butterfly can leave it lying on the pillow' },
+  hanachirusato:{ r: '15%', ja: '蝶は落とせている。強さを少し変えると上位の銘へ', en: 'You hit the butterfly — adjust your strength a little for higher forms' },
+  sekiya:       { r: '20%', ja: '弱め（画面の1/5をゆっくり約0.8秒）だと、蝶は残り扇が枕に触れる', en: 'A soft throw (a fifth of the screen, slowly, ~0.8 s) leaves the butterfly and touches the pillow' },
+  tenarai:      { r: '24%', ja: '強すぎると、扇は蝶を越えて飛び去る', en: 'Too strong and the fan sails over everything' },
+  kotsuri:      { r: '24%', ja: '弱すぎると、枕を打つだけで終わる', en: 'Too soft and the fan just taps the pillow' },
+  nowaki:       { r: '1.8%', ja: 'とても強い払い、とくに弧・円・ジグザグで枕を倒しやすい', en: 'Very hard swipes — especially arcs, circles and zigzags — topple the pillow' },
 };
 function meiTipHtml(id) {
   const t = MEI_TIP[id];
@@ -115,7 +118,7 @@ const L = {
     btnResume: '続ける', btnClose: '閉じる', soundOn: '音：鳴', soundOff: '音：消',
     resultLabel: '結びの一巻', bestLabel: 'これまでの最高 ',
     scoresNote1: '扇・蝶・枕のかたちに、源氏物語五十四帖の名を借りて点を定めます。',
-    scoresNote3: '【出現率について】物理計算で10万投を試した参考値です（狙い・強さ・払い方をばらばらにした場合）。「コツ通り」は、その銘のコツの範囲で投げた場合の割合です。強さの目安は、半分弱＝画面の高さの1/4を約0.5秒、半分ほど＝1/4を約0.4秒、やや強め＝1/3を約0.3秒で払う程度。結果は端末の速さによらず同じです。',
+    scoresNote3: '【出現率について】物理計算で4万投を試した参考値です（狙い・強さ・払い方をばらばらにした場合）。「コツ通り」は、その銘のコツの範囲で投げた場合の割合です。強さの目安は、半分弱＝画面の高さの1/4を約0.5秒、半分ほど＝1/4を約0.4秒、やや強め＝1/3を約0.3秒で払う程度。結果は端末の速さによらず同じです。',
     scoresNote2: '【流派について】銘とその点は流派ごとに異なります。本作の銘定は、都御流の源氏物語形式を基に、御扇流・其扇流などの定めを参考にした独自のものです。',
     tips: [
       '<b>ふわりと投じる。</b>力任せは扇の乱れのもと。枕を倒せば「野分」、大きく点を失います。',
@@ -137,7 +140,7 @@ const L = {
     btnResume: 'Resume', btnClose: 'Close', soundOn: 'Sound: On', soundOff: 'Sound: Off',
     resultLabel: 'Final Tally', bestLabel: 'Best: ',
     scoresNote1: 'Each final arrangement of fan, butterfly and pillow is a “mei” — a form named after a chapter of the Tale of Genji, each worth its own points.',
-    scoresNote3: 'About the rates: reference values from 100,000 simulated throws with random aim, strength and swipe. “With the tip” is the rate when throwing as the tip says. Strength guide: a little under half = a quarter of the screen height in ~0.5 s; about half = a quarter in ~0.4 s; a bit firm = a third in ~0.3 s. Results are the same on any device.',
+    scoresNote3: 'About the rates: reference values from 40,000 simulated throws with random aim, strength and swipe. “With the tip” is the rate when throwing as the tip says. Strength guide: a little under half = a quarter of the screen height in ~0.5 s; about half = a quarter in ~0.4 s; a bit firm = a third in ~0.3 s. Results are the same on any device.',
     scoresNote2: 'About schools: forms and points vary by school. This game uses its own scoring based on the Miyako-Goryu Genji style, with reference to the Gosen-ryu and Kisen-ryu schools.',
     tips: [
       '<b>Toss gently.</b> Throwing hard scatters the fan — topple the pillow and “Nowaki” costs you 30 points.',
@@ -496,8 +499,10 @@ function buildFanMesh() {
 //   読み込み完了までは暫定形状を表示し、失敗時はそのまま暫定形状を使う。
 const MODEL_VER = 1; // GLB を差し替えたら上げる（キャッシュ対策）
 const gltfLoader = new GLTFLoader();
-function withModel(name, buildFallback) {
-  const wrap = new THREE.Group();
+function withModel(name, buildFallback, offY = 0) {
+  const outer = new THREE.Group(), wrap = new THREE.Group();
+  wrap.position.y = offY;   // 物理の原点（重心）と模型の基準点のずれ
+  outer.add(wrap);
   const fallback = buildFallback();
   wrap.add(fallback);
   gltfLoader.load(`models/${name}.glb?v=${MODEL_VER}`, (gltf) => {
@@ -505,10 +510,10 @@ function withModel(name, buildFallback) {
     wrap.remove(fallback);
     wrap.add(gltf.scene);
   }, undefined, (err) => console.warn(`[model] ${name}.glb の読み込みに失敗。暫定形状を使用`, err));
-  return wrap;
+  return outer;
 }
 const makuraMesh = withModel('makura', buildMakuraMesh); scene.add(makuraMesh);
-const choMesh = withModel('cho', buildChoMesh); scene.add(choMesh);
+const choMesh = withModel('cho', buildChoMesh, -CHO_COM); scene.add(choMesh);
 const fanMesh = withModel('fan', buildFanMesh); scene.add(fanMesh);
 
 /* ---------- 物理 ---------- */
@@ -539,23 +544,65 @@ const makuraBody = new CANNON.Body({
 makuraBody.sleepSpeedLimit = 0.08; makuraBody.sleepTimeLimit = 0.4;
 world.addBody(makuraBody);
 
-// 原点＝重心を板の中央に置く（底に置くと起き上がり小法師になってしまう）
+// 平たい凸多角形（輪郭 poly を厚み ±ht で押し出した柱）。axis='y' は poly を (x,z) に、'z' は (x,y) に置く。
+// 形の原点は多角形の重心にして offset で置く（cannon-es は面の向きと押し返す向きを形の原点から決めるため）
+function flatPrism(body, poly, ht, axis) {
+  let cx = 0, cy = 0; for (const [a, b] of poly) { cx += a; cy += b; } cx /= poly.length; cy /= poly.length;
+  const P = (a, b, t) => axis === 'y' ? new CANNON.Vec3(a - cx, t, b - cy) : new CANNON.Vec3(a - cx, b - cy, t);
+  const n = poly.length, verts = [];
+  for (const [a, b] of poly) verts.push(P(a, b, ht));
+  for (const [a, b] of poly) verts.push(P(a, b, -ht));
+  const faces = [[...Array(n).keys()], [...Array(n).keys()].map(i => n + i)];
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n; faces.push([i, j, n + j, n + i]); }
+  // 面は外から見て反時計回りにそろえる（法線が形の原点から外を向くように）
+  const e1 = new CANNON.Vec3(), e2 = new CANNON.Vec3(), nn = new CANNON.Vec3(), fc = new CANNON.Vec3();
+  for (const f of faces) {
+    verts[f[1]].vsub(verts[f[0]], e1); verts[f[2]].vsub(verts[f[0]], e2); e1.cross(e2, nn);
+    fc.setZero(); for (const k of f) fc.vadd(verts[k], fc);
+    if (nn.dot(fc) < 0) f.reverse();
+  }
+  const off = axis === 'y' ? new CANNON.Vec3(cx, 0, cy) : new CANNON.Vec3(cx, cy, 0);
+  body.addShape(new CANNON.ConvexPolyhedron({ vertices: verts, faces }), off);
+}
+// 左右対称にした輪郭（右半分＋鏡像）
+const mirror = (half) => [...half, ...half.slice().reverse().filter(([a]) => a > 0).map(([a, b]) => [-a, b])];
+
+// 蝶：当たり判定は 3D モデル（models/cho.glb）の形に合わせる（v1.7）。
+// 以前は幅9cmの板が台座の底まで下りていて、実物より左右の支えが約2.6倍広く、やたら直立していた。
+// 実物どおり、3.4cm角の台座と細い軸の上に銀杏形の羽が載る形。原点は台座の底から 0.0375 上（以前と同じ）
 const CHO_HALF_H = 0.0475;
 const choBody = new CANNON.Body({ mass: 0.02, material: matWood });
-// 板をわずかに上へずらす＝重心が板中央より少し下（錘付きの蝶。たまに立って落ちる）
-choBody.addShape(new CANNON.Box(new CANNON.Vec3(CHO.w / 2, CHO_HALF_H, 0.004)), new CANNON.Vec3(0, 0.01, 0));
-// 台座（接地面）：直立が安定するよう広め
-choBody.addShape(new CANNON.Box(new CANNON.Vec3(0.018, 0.006, 0.018)), new CANNON.Vec3(0, -CHO_HALF_H + 0.016, 0));
+// cannon-es は body の原点＝重心なので、形を CHO_COM だけ下げて置く（模型も同じだけ下げる）
+flatPrism(choBody, mirror([[0, 0.002], [0.038, 0.028], [0.038, 0.0365], [0.0315, 0.043], [0.0177, 0.0513], [0.005, 0.0543]]).map(([a, b]) => [a, b - CHO_COM]), 0.0045, 'z');
+choBody.addShape(new CANNON.Box(new CANNON.Vec3(0.003, 0.0145, 0.003)), new CANNON.Vec3(0, -0.0105 - CHO_COM, 0));   // 軸
+choBody.addShape(new CANNON.Box(new CANNON.Vec3(0.017, 0.00625, 0.017)), new CANNON.Vec3(0, -0.03125 - CHO_COM, 0)); // 台座
 choBody.linearDamping = 0.2; choBody.angularDamping = 0.3;
 choBody.sleepSpeedLimit = 0.06; choBody.sleepTimeLimit = 0.35;
 world.addBody(choBody);
 
-const fanBody = new CANNON.Body({
-  mass: 0.09, material: matFan,
-  shape: new CANNON.Box(new CANNON.Vec3(0.14, 0.012, 0.075)),
-});
-// 要（かなめ）側にも当たり判定を持たせ、床へのめり込みを防ぐ
-fanBody.addShape(new CANNON.Box(new CANNON.Vec3(0.02, 0.01, 0.02)), new CANNON.Vec3(0, 0, 0.098));
+// 扇：当たり判定は 3D モデル（models/fan.glb）の扇形に合わせる（v1.7）。
+// 以前は 28×15cm の箱＋要の箱で、要側と弧の先で箱の角が見た目より4〜10cm外に出ており、厚みも上下に約5mm余分だった
+// （夢浮橋で扇が蝶から浮いて見えた）。飛び方は変えないよう、慣性は以前の箱の値に固定する
+const fanBody = new CANNON.Body({ mass: 0.09, material: matFan });
+const FAN_INERTIA = (() => {
+  const b = new CANNON.Body({ mass: 0.09 });
+  b.addShape(new CANNON.Box(new CANNON.Vec3(0.14, 0.012, 0.075)));
+  b.addShape(new CANNON.Box(new CANNON.Vec3(0.02, 0.01, 0.02)), new CANNON.Vec3(0, 0, 0.098));
+  return b.inertia.clone();
+})();
+flatPrism(fanBody, mirror([[0, -0.072], [0.038, -0.068], [0.083, -0.047], [0.116, -0.020], [0.138, 0.006], [0.149, 0.033], [0.006, 0.109]]), 0.006, 'y');
+{
+  const orig = fanBody.updateMassProperties.bind(fanBody);
+  fanBody.updateMassProperties = () => {
+    orig();
+    if (fanBody.mass > 0) {
+      fanBody.inertia.copy(FAN_INERTIA);
+      fanBody.invInertia.set(1 / FAN_INERTIA.x, 1 / FAN_INERTIA.y, 1 / FAN_INERTIA.z);
+      fanBody.updateInertiaWorld(true);
+    }
+  };
+  fanBody.updateMassProperties();
+}
 fanBody.linearDamping = 0.05; fanBody.angularDamping = 0.9;
 fanBody.sleepSpeedLimit = 0.07; fanBody.sleepTimeLimit = 0.35;
 world.addBody(fanBody);
@@ -890,7 +937,7 @@ function resetBodies() {
   makuraBody.quaternion.set(0, 0, 0, 1);
   makuraBody.velocity.setZero(); makuraBody.angularVelocity.setZero();
   makuraBody.wakeUp();
-  choBody.position.set(0, MAKURA.h + CHO_HALF_H - 0.01 + 0.0005, 0);
+  choBody.position.set(0, MAKURA.h + CHO_HALF_H - 0.01 + 0.0005 + CHO_COM, 0);
   choBody.quaternion.set(0, 0, 0, 1);
   choBody.velocity.setZero(); choBody.angularVelocity.setZero();
   choBody.wakeUp();
@@ -1085,7 +1132,7 @@ function freezeYume() {
   for (const b of physBodies) { b.velocity.setZero(); b.angularVelocity.setZero(); }
 }
 // 物理・判定を変えたら上げる。番付の記録はこの版が同じものだけ再生で確かめる
-const PHYS_VER = 'p6';
+const PHYS_VER = 'p7';
 function simThrow(inp, frameDt = 1 / 60) {
   const keep = state;
   simMode = true;
@@ -1205,7 +1252,7 @@ function nextThrow() {
 /* ---------- 銘の見本（銘定表の行をタップすると実際の座敷で再現） ---------- */
 // p: body 原点の位置[m]、r: [x, y, z] 回転（YXZ 順＝先に倒して、後から向きを回す）
 // 蝶: 枕上に立つ y=0.3075 / 床に立つ y=0.0375 / 倒れ y≈0.02（r.x=-H 仰向け。伏せ(+H)は朱が隠れて分かりにくいので使わない）
-// 扇: 床に伏す y=0.012 / 枕上 y=0.282 / r.x>0 で外周側（-Z）が持ち上がる
+// 扇: 床に伏す y=0.006 / 枕上 y=0.282 / r.x>0 で外周側（-Z）が持ち上がる
 const H = Math.PI / 2;
 const CHO_ON_MAKURA = { p: [0, 0.3075, 0], r: [0, 0, 0] };
 const FAN_LEAN = { p: [0, 0.10, 0.09], r: [1.0, 0.15, 0] };       // 枕の前面にもたれる
@@ -1215,8 +1262,8 @@ const MEI_POSE = {
   yumeukihashi: { cho: { p: [0.27, 0.0375, 0.02], r: [0, -0.25, 0] }, fan: { p: [0.152, 0.19, 0.0], r: [0, 0, -0.62] } },
   kiritsubo:    { cho: { p: [0.13, 0.0375, 0.06], r: [0, -0.4, 0] }, fan: FAN_ON_MAKURA },
   mio:          { cho: { p: [0.11, 0.02, 0.12], r: [-H, 0.5, 0] }, fan: FAN_ON_MAKURA },
-  ukifune:      { cho: { p: [0.03, 0.0615, 0.19], r: [0, 0.3, 0] }, fan: { p: [0.02, 0.012, 0.20], r: [0, 0.4, 0] } },
-  akashi:       { cho: { p: [0.12, 0.0375, 0.06], r: [0, -0.3, 0] }, fan: { p: [-0.12, 0.012, 0.22], r: [0, 0.8, 0] } },
+  ukifune:      { cho: { p: [0.03, 0.0615, 0.19], r: [0, 0.3, 0] }, fan: { p: [0.02, 0.006, 0.20], r: [0, 0.4, 0] } },
+  akashi:       { cho: { p: [0.12, 0.0375, 0.06], r: [0, -0.3, 0] }, fan: { p: [-0.12, 0.006, 0.22], r: [0, 0.8, 0] } },
   // 紅梅・花宴は試算で実際に決まった配置（枕・蝶・扇の位置と向き）を、見やすい向きへ回して使う
   // 紅梅：蝶は枕の上に立ったまま、扇が枕の上に立って蝶にもたれる
   kobai:        { yaw: Math.PI, snap: [
@@ -1227,14 +1274,14 @@ const MEI_POSE = {
     [[-0.0005, 0.135, 0.0013], [0, 0.0015, 0, 1]], [[-0.0624, 0.1894, -0.055], [0.0078, -0.1024, 0.9942, -0.032]],
     [[-0.1339, 0.1325, -0.0329], [-0.3378, -0.5235, 0.4241, 0.6573]]] },
   suma:         { cho: { p: [0.13, 0.02, -0.04], r: [-H, 0.3, 0] }, fan: FAN_LEAN },
-  yugao:        { cho: { p: [0.04, 0.044, 0.17], r: [-H, 0.6, 0] }, fan: { p: [0.05, 0.012, 0.18], r: [0, 0.2, 0] } },
-  matsukaze:    { cho: { p: [0, 0.29, 0], r: [-H, 0.4, 0] }, fan: { p: [-0.12, 0.012, 0.24], r: [0, -0.5, 0] } },
-  hanachirusato:{ cho: { p: [0.12, 0.02, 0.02], r: [-H, 0.7, 0] }, fan: { p: [-0.19, 0.012, 0.06], r: [0, -1.0, 0] } },
+  yugao:        { cho: { p: [0.04, 0.044, 0.17], r: [-H, 0.6, 0] }, fan: { p: [0.05, 0.006, 0.18], r: [0, 0.2, 0] } },
+  matsukaze:    { cho: { p: [0, 0.29, 0], r: [-H, 0.4, 0] }, fan: { p: [-0.12, 0.006, 0.24], r: [0, -0.5, 0] } },
+  hanachirusato:{ cho: { p: [0.12, 0.02, 0.02], r: [-H, 0.7, 0] }, fan: { p: [-0.19, 0.006, 0.06], r: [0, -1.0, 0] } },
   sekiya:       { cho: CHO_ON_MAKURA, fan: FAN_LEAN },
-  tenarai:      { cho: CHO_ON_MAKURA, fan: { p: [-0.27, 0.012, 0.08], r: [0, -0.5, 0] } },
-  kotsuri:      { cho: CHO_ON_MAKURA, fan: { p: [0.03, 0.012, 0.17], r: [0, 0.25, 0] } },
+  tenarai:      { cho: CHO_ON_MAKURA, fan: { p: [-0.27, 0.006, 0.08], r: [0, -0.5, 0] } },
+  kotsuri:      { cho: CHO_ON_MAKURA, fan: { p: [0.03, 0.006, 0.17], r: [0, 0.25, 0] } },
   nowaki:       { makura: { p: [0, 0.045, -0.10], r: [-H, 0, 0] },
-                  cho: { p: [0.12, 0.02, -0.26], r: [-H, 0.9, 0] }, fan: { p: [-0.05, 0.012, 0.16], r: [0, -0.3, 0] } },
+                  cho: { p: [0.12, 0.02, -0.26], r: [-H, 0.9, 0] }, fan: { p: [-0.05, 0.006, 0.16], r: [0, -0.3, 0] } },
 };
 // finishThrow と同じ向き（[0.40,0.34,0.66]→[0,0.16,0]）から少し引いて、縦長画面でも札の上に全体が収まるようにする
 const MEI_VIEW = { pos: [0.70, 0.42, 1.16], look: [0, 0.10, 0] };
@@ -1244,8 +1291,14 @@ function placeBody(body, pose) {
   body.position.set(...pose.p);
   poseQuat.setFromEuler(poseEuler.set(pose.r[0], pose.r[1], pose.r[2], 'YXZ'));
   body.quaternion.set(poseQuat.x, poseQuat.y, poseQuat.z, poseQuat.w);
+  if (body === choBody) shiftChoCom();
   body.velocity.setZero(); body.angularVelocity.setZero();
   interpOK = false;
+}
+// 見本の配置は v1.6 までの基準点（台座の底から 0.0375）で書いてあるので、重心の分だけ蝶の向きに沿ってずらす
+function shiftChoCom() {
+  const d = choBody.quaternion.vmult(new CANNON.Vec3(0, CHO_COM, 0));
+  choBody.position.vadd(d, choBody.position);
 }
 // 試算の配置を枕の縦軸まわりに yaw だけ回して置く（全体を同じだけ回すので、物理的な形は変わらない）
 function placeSnap(snap, yaw) {
@@ -1254,6 +1307,7 @@ function placeSnap(snap, yaw) {
     const [x, y, z] = snap[k][0], [qx, qy, qz, qw] = snap[k][1];
     b.position.set(c * x + sn * z, y, -sn * x + c * z);
     b.quaternion.set(hw * qx + hy * qz, hw * qy + hy * qw, hw * qz - hy * qx, hw * qw - hy * qy);
+    if (b === choBody) shiftChoCom();
     b.velocity.setZero(); b.angularVelocity.setZero();
   });
   interpOK = false;
@@ -2000,9 +2054,15 @@ if (DEBUG) {
     const wireMat = new THREE.MeshBasicMaterial({ color: 0x00ff88, wireframe: true, depthTest: false });
     for (const [body, mesh] of [[makuraBody, makuraMesh], [choBody, choMesh], [fanBody, fanMesh]]) {
       body.shapes.forEach((sh, i) => {
-        if (!sh.halfExtents) return;
-        const he = sh.halfExtents;
-        const w = new THREE.Mesh(new THREE.BoxGeometry(he.x * 2, he.y * 2, he.z * 2), wireMat);
+        let geo;
+        if (sh.halfExtents) { const he = sh.halfExtents; geo = new THREE.BoxGeometry(he.x * 2, he.y * 2, he.z * 2); }
+        else if (sh.vertices && sh.faces) {   // 凸多角形：面を三角形に分けて描く
+          const pos = [];
+          for (const f of sh.faces) for (let k = 1; k + 1 < f.length; k++)
+            for (const v of [f[0], f[k], f[k + 1]]) pos.push(sh.vertices[v].x, sh.vertices[v].y, sh.vertices[v].z);
+          geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        } else return;
+        const w = new THREE.Mesh(geo, wireMat);
         w.position.copy(body.shapeOffsets[i]);
         w.quaternion.copy(body.shapeOrientations[i]);
         w.renderOrder = 999;
